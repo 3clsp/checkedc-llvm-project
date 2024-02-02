@@ -136,6 +136,7 @@ public:
   }
 
   bool VisitRecordDecl(RecordDecl *Declaration) {
+    static int InnerCount = 0;
     if (Declaration->isThisDeclarationADefinition()) {
       RecordDecl *Definition = Declaration->getDefinition();
       assert("Declaration is a definition, but getDefinition() is null?"
@@ -146,6 +147,36 @@ public:
         FileID FID = FL.getFileID();
         const FileEntry *FE = SM.getFileEntryForID(FID);
         std::string StName = Definition->getNameAsString();
+        if (StName.empty()) {
+          const TypedefNameDecl *TypedefDecl = nullptr;
+          if (Definition->getTypedefNameForAnonDecl()) {
+            TypedefDecl = Definition->getTypedefNameForAnonDecl();
+          }
+          if (TypedefDecl) {
+            StName = TypedefDecl->getNameAsString();
+          } else {
+            DeclContext *ParentDeclCtx = Definition->getParent();
+            if (ParentDeclCtx && isa<RecordDecl>(ParentDeclCtx)) {
+              StName = cast<RecordDecl>(ParentDeclCtx)->getNameAsString();
+              if (StName.empty()) {
+                RecordDecl *ParentDecl = cast<RecordDecl>(ParentDeclCtx);
+                if (ParentDecl->getTypedefNameForAnonDecl()) {
+                  TypedefDecl = ParentDecl->getTypedefNameForAnonDecl();
+                }
+                if (TypedefDecl) {
+                  StName = TypedefDecl->getNameAsString();
+                }
+              }
+              if (StName.empty()) {
+                StName = "AnonymousStructOrUnion";
+              }
+              StName += "_anon_" + std::to_string(InnerCount);
+              InnerCount++;
+            } else {
+              StName = "AnonymousStructOrUnion" + std::to_string(InnerCount);
+            }
+          }
+        }
         auto &ABInfo = Info.getABoundsInfo();
         if (FE && FE->isValid()
             && Info.StArrPtrs.find(StName) == Info.StArrPtrs.end()
@@ -313,6 +344,9 @@ void DeclToJsonConsumer::HandleTranslationUnit(ASTContext &C) {
   DeclJsonVisitor DJV(&C, Info);
   TranslationUnitDecl *TUD = C.getTranslationUnitDecl();
   for (const auto &D : TUD->decls()) {
+    // Dump the decl
+    // llvm::outs() << "Decl: ";
+    // D->dump();
     DJV.TraverseDecl(D);
   }
   Info.exitCompilationUnit();
