@@ -75,6 +75,7 @@ DeclRewriter::buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
                              std::string UseName, ProgramInfo &Info,
                              ArrayBoundsRewriter &ABR, bool GenerateSDecls,
                              bool SDeclChecked) {
+  Info.getPerfStats().incrementNumITypes();
   std::string DeclName;
   bool NeedsFreshLowerBound =
       checkNeedsFreshLowerBound(Defn, UseName, Info, DeclName);
@@ -733,7 +734,7 @@ bool FunctionDeclBuilder::VisitFunctionDecl(FunctionDecl *FD) {
       RewrittenDecl RD =
         this->buildDeclVar(CV, PVDecl, PVDecl->getQualifiedNameAsString(),
                            RewriteGeneric, RewriteParams, RewriteReturn,
-                           FD->isStatic(), GenerateSDecls);
+                           FD->isStatic(), GenerateSDecls, FuncName, FD);
       ParmStrs.push_back(RD.Type + RD.IType);
       if (!RD.SupplementaryDecl.empty())
         SDecls.push_back(RD.SupplementaryDecl);
@@ -746,7 +747,7 @@ bool FunctionDeclBuilder::VisitFunctionDecl(FunctionDecl *FD) {
       const FVComponentVariable *CV = FDConstraint->getCombineParam(I);
       RewrittenDecl RD =
         this->buildDeclVar(CV, PVDecl, "", RewriteGeneric, RewriteParams,
-                           RewriteReturn, FD->isStatic(), GenerateSDecls);
+                           RewriteReturn, FD->isStatic(), GenerateSDecls, FuncName, FD);
       ParmStrs.push_back(RD.Type + RD.IType);
       if (!RD.SupplementaryDecl.empty())
         SDecls.push_back(RD.SupplementaryDecl);
@@ -770,7 +771,7 @@ bool FunctionDeclBuilder::VisitFunctionDecl(FunctionDecl *FD) {
   RewrittenDecl RewrittenReturn =
     this->buildDeclVar(FDConstraint->getCombineReturn(), FD, "", RewriteGeneric,
                        RewriteParams, RewriteReturn, FD->isStatic(),
-                       GenerateSDecls);
+                       GenerateSDecls, FuncName, FD);
   assert("Supplementary declarations should not be generated for return." &&
          RewrittenReturn.SupplementaryDecl.empty());
 
@@ -895,8 +896,25 @@ RewrittenDecl
 FunctionDeclBuilder::buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
                                     std::string UseName, bool &RewriteParm,
                                     bool &RewriteRet, bool GenerateSDecls,
-                                    bool SDeclChecked) {
-  Info.getPerfStats().incrementNumITypes();
+                                    bool SDeclChecked, std::string FuncName,
+                                    bool StaticFunc, FunctionDecl *FD) {
+  // Don't increment the number of itypes if we've already visited this function.
+  std::string QualName = UseName == "" ? RETVAR : UseName;
+  if (StaticFunc) {
+    FunctionDecl *FDef = FD->getDefinition();
+    if (FDef) {
+      auto PSL = PersistentSourceLoc::mkPSL(FDef, *Context);
+      if (!isFunctionRetOrParamVisited(FuncName, QualName, PSL)) {
+        Info.getPerfStats().incrementNumITypes();
+        markFunctionRetOrParamVisited(FuncName, QualName, PSL);
+      }
+    }
+  } else {
+    if (!isFunctionRetOrParamVisited(FuncName, UseName)) {
+      Info.getPerfStats().incrementNumITypes();
+      markFunctionRetOrParamVisited(FuncName, UseName);
+    }
+  }
   RewrittenDecl RD = DeclRewriter::buildItypeDecl(
       Defn, Decl, UseName, Info, ABRewriter, GenerateSDecls, SDeclChecked);
   RewriteParm = true;
@@ -913,16 +931,36 @@ FunctionDeclBuilder::buildDeclVar(const FVComponentVariable *CV,
                                   DeclaratorDecl *Decl, std::string UseName,
                                   bool &RewriteGen, bool &RewriteParm,
                                   bool &RewriteRet, bool StaticFunc,
-                                  bool GenerateSDecls) {
+                                  bool GenerateSDecls, std::string FuncName,
+                                  FunctionDecl *FD) {
 
   bool CheckedSolution = CV->hasCheckedSolution(Info.getConstraints());
   bool ItypeSolution = CV->hasItypeSolution(Info.getConstraints());
   if (ItypeSolution ||
       (CheckedSolution && _3COpts.ItypesForExtern && !StaticFunc)) {
-    return buildItypeDecl(CV->getExternal(), Decl, UseName, RewriteParm,
-                          RewriteRet, GenerateSDecls, CheckedSolution);
+    return buildItypeDecl(CV->getExternal(), Decl, UseName, RewriteParm, RewriteRet,
+                          GenerateSDecls, CheckedSolution, FuncName, StaticFunc, FD);
   }
   if (CheckedSolution) {
+    std::string QualName = UseName == "" ? RETVAR : UseName;
+    // Decrement the NumItype counter if we've already visited this function.
+    // This occurs when we had an itype in source but 3C inferred a checked
+    // solution.
+    if (StaticFunc) {
+      FunctionDecl *FDef = FD->getDefinition();
+      if (FDef) {
+        auto PSL = PersistentSourceLoc::mkPSL(FDef, *Context);
+        if (isFunctionRetOrParamVisited(FuncName, QualName, PSL)) {
+          Info.getPerfStats().decrementNumITypes();
+          unmarkFunctionRetOrParamVisited(FuncName, QualName, PSL);
+        }
+      }
+    } else {
+      if (isFunctionRetOrParamVisited(FuncName, QualName)) {
+        Info.getPerfStats().decrementNumITypes();
+        unmarkFunctionRetOrParamVisited(FuncName, QualName);
+      }
+    }
     return buildCheckedDecl(CV->getExternal(), Decl, UseName, RewriteParm,
                             RewriteRet, GenerateSDecls);
   }

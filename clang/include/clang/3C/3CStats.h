@@ -17,6 +17,8 @@
 #include "clang/AST/Stmt.h"
 #include "llvm/Support/raw_ostream.h"
 
+#define RETVAR "$ret"
+
 class PerformanceStats {
 public:
   double CompileTime;
@@ -73,6 +75,7 @@ public:
   void incrementNumWildCasts();
   void incrementNumFixedCasts();
   void incrementNumITypes();
+  void decrementNumITypes();
   void incrementNumCheckedRegions();
   void incrementNumUnCheckedRegions();
 

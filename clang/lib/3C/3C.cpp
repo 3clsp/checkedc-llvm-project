@@ -33,6 +33,9 @@ using namespace llvm;
 #define AFTER_SUBTYPING_SUFFIX "_after_subtyping_"
 
 std::set<std::string> FilePaths;
+std::map<std::string, std::set<std::string>> ItypeCountVisitedFunctions;
+std::map<PersistentSourceLoc, std::map<std::string, std::set<std::string>>>
+    ItypeCountVisitedFunctionsStatic;
 
 struct _3COptions _3COpts;
 

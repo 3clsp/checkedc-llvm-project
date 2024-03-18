@@ -64,6 +64,9 @@ void PerformanceStats::incrementNumFixedCasts() { NumFixedCasts++; }
 
 void PerformanceStats::incrementNumITypes() { NumITypes++; }
 
+// This is needed in some corner cases where we have to decrement the count.
+void PerformanceStats::decrementNumITypes() { NumITypes--; }
+
 void PerformanceStats::incrementNumCheckedRegions() { NumCheckedRegions++; }
 
 void PerformanceStats::incrementNumUnCheckedRegions() { NumUnCheckedRegions++; }
@@ -136,12 +139,65 @@ bool StatsRecorder::VisitCompoundStmt(clang::CompoundStmt *S) {
 // Record itype declarations.
 bool StatsRecorder::VisitDecl(clang::Decl *D) {
   auto &PStats = Info->getPerfStats();
+  
+  auto StaticMarker = [this, &PStats](std::string FuncName, std::string VarName, PersistentSourceLoc PSL) -> void {
+    if (isFunctionRetOrParamVisited(FuncName, VarName, PSL)) {
+      return;
+    }
+    markFunctionRetOrParamVisited(FuncName, VarName, PSL);
+    PStats.incrementNumITypes();
+  };
+
+  auto GlobalMarker = [&PStats](std::string FuncName, std::string VarName) -> void {
+    if (isFunctionRetOrParamVisited(FuncName, VarName)) {
+      return;
+    }
+    markFunctionRetOrParamVisited(FuncName, VarName);
+    PStats.incrementNumITypes();
+  };
+
   if (D != nullptr) {
     auto PSL = PersistentSourceLoc::mkPSL(D, *Context);
     if (PSL.valid() && canWrite(PSL.getFileName())) {
       if (DeclaratorDecl *DD = dyn_cast<DeclaratorDecl>(D)) {
         if (DD->hasInteropTypeExpr()) {
-          PStats.incrementNumITypes();
+          // We have to handle multiple cases here.
+          // FunctionDecl is for return types.
+          if (FunctionDecl *FD = dyn_cast<FunctionDecl>(DD)) {
+            // If it is a FunctionDecl and it is a static function, then we add
+            // it to the function visited map along with the return type.
+            bool IsStatic = !FD->isGlobal();
+            if (IsStatic) {
+              auto DefPSL = PersistentSourceLoc::mkPSL(FD, *Context);
+              StaticMarker(FD->getNameAsString(), RETVAR, DefPSL);
+            } else {
+              // If the FunctionDecl is not static, then we add it to the global
+              // function visited map along with the return type.
+              GlobalMarker(FD->getNameAsString(), RETVAR);
+            }
+          } else if (ParmVarDecl *PVD = dyn_cast<ParmVarDecl>(DD)) {
+            // If it is a ParmVarDecl, then we add it to the function visited
+            // map along with the function it is a part of.
+            DeclContext *DC = PVD->getParentFunctionOrMethod();
+            if (DC) {
+              if (FunctionDecl *FD = dyn_cast<FunctionDecl>(DC)) {
+                bool IsStatic = !FD->isGlobal();
+                if (IsStatic) {
+                  FunctionDecl *FDef = FD->getDefinition();
+                  // static function should be defined in the same file.
+                  if (FDef) {
+                    auto DefPSL = PersistentSourceLoc::mkPSL(FDef, *Context);
+                    StaticMarker(FDef->getNameAsString(), PVD->getNameAsString(), DefPSL);
+                  }
+                } else {
+                  GlobalMarker(FD->getNameAsString(), PVD->getNameAsString());
+                }
+              }
+            }
+          } else {
+            // If it is a anything else, then we can just increment the count.
+            PStats.incrementNumITypes();
+          }
         }
       }
     }

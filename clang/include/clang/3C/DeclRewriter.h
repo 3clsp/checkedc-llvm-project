@@ -24,6 +24,8 @@
 using namespace llvm;
 using namespace clang;
 
+#define RETVAR "$ret"
+
 class DeclRewriter {
 public:
   DeclRewriter(Rewriter &R, ProgramInfo &Info, ASTContext &A)
@@ -100,7 +102,8 @@ protected:
   virtual RewrittenDecl
   buildDeclVar(const FVComponentVariable *CV, DeclaratorDecl *Decl,
                std::string UseName, bool &RewriteGen, bool &RewriteParm,
-               bool &RewriteRet, bool StaticFunc, bool GenerateSDecls);
+               bool &RewriteRet, bool StaticFunc, bool GenerateSDecls,
+               std::string FuncName, FunctionDecl *FD);
 
   RewrittenDecl
   buildCheckedDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
@@ -110,7 +113,8 @@ protected:
   RewrittenDecl buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
                                std::string UseName, bool &RewriteParm,
                                bool &RewriteRet, bool GenerateSDecls,
-                               bool SDeclChecked);
+                               bool SDeclChecked, std::string FuncName,
+                               bool StaticFunc, FunctionDecl *FD);
 
   bool inParamMultiDecl(const ParmVarDecl *PVD);
 };

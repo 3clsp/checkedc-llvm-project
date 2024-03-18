@@ -106,6 +106,23 @@ std::string getStorageQualifierString(clang::Decl *D);
 std::error_code tryGetCanonicalFilePath(const std::string &FileName,
                                         std::string &AbsoluteFp);
 
+// Keep track of global functions already visited.
+extern std::map<std::string, std::set<std::string>> ItypeCountVisitedFunctions;
+// Keep track of static functions already visited per AST.
+extern std::map<PersistentSourceLoc, std::map<std::string, std::set<std::string>>>
+    ItypeCountVisitedFunctionsStatic;
+
+bool isFunctionRetOrParamVisited(std::string FuncName, std::string VarName);
+void markFunctionRetOrParamVisited(std::string FuncName, std::string VarName);
+void unmarkFunctionRetOrParamVisited(std::string FuncName, std::string VarName);
+
+bool isFunctionRetOrParamVisited(std::string FuncName, std::string VarName,
+                                 PersistentSourceLoc PSL);
+void markFunctionRetOrParamVisited(std::string FuncName, std::string VarName,
+                                   PersistentSourceLoc PSL);
+void unmarkFunctionRetOrParamVisited(std::string FuncName, std::string VarName,
+                                     PersistentSourceLoc PSL);
+
 // This compares entire path components: it's smart enough to know that "foo.c"
 // does not start with "foo". It's not smart about anything else, so you should
 // probably put both paths through tryGetCanonicalFilePath first.

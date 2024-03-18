@@ -164,6 +164,47 @@ std::error_code tryGetCanonicalFilePath(const std::string &FileName,
   return EC;
 }
 
+bool isFunctionRetOrParamVisited(std::string FuncName, std::string VarName) {
+  if (ItypeCountVisitedFunctions.find(FuncName) != ItypeCountVisitedFunctions.end()) {
+    return ItypeCountVisitedFunctions[FuncName].find(VarName) !=
+           ItypeCountVisitedFunctions[FuncName].end();
+  }
+  return false;
+}
+
+void markFunctionRetOrParamVisited(std::string FuncName, std::string VarName) {
+    ItypeCountVisitedFunctions[FuncName].insert(VarName);
+}
+
+void unmarkFunctionRetOrParamVisited(std::string FuncName, std::string VarName) {
+  auto &VarSet = ItypeCountVisitedFunctions[FuncName];
+  VarSet.erase(VarName);
+}
+
+bool isFunctionRetOrParamVisited(std::string FuncName, std::string VarName,
+                                 PersistentSourceLoc PSL) {
+  if (ItypeCountVisitedFunctionsStatic.find(PSL) != ItypeCountVisitedFunctionsStatic.end()) {
+    if (ItypeCountVisitedFunctionsStatic[PSL].find(FuncName) != 
+        ItypeCountVisitedFunctionsStatic[PSL].end()) {
+      return ItypeCountVisitedFunctionsStatic[PSL][FuncName].find(VarName) !=
+             ItypeCountVisitedFunctionsStatic[PSL][FuncName].end();
+    }
+  }
+  return false;
+}
+
+void markFunctionRetOrParamVisited(std::string FuncName, std::string VarName,
+                                   PersistentSourceLoc PSL) {
+    ItypeCountVisitedFunctionsStatic[PSL][FuncName].insert(VarName);
+}
+
+void unmarkFunctionRetOrParamVisited(std::string FuncName, std::string VarName,
+                                     PersistentSourceLoc PSL) {
+    auto &FuncMap = ItypeCountVisitedFunctionsStatic[PSL];
+    auto &VarSet = FuncMap[FuncName];
+    VarSet.erase(VarName);
+}
+
 bool filePathStartsWith(const std::string &Path, const std::string &Prefix) {
   // If the path exactly equals the prefix, don't ruin it by appending a
   // separator to the prefix. (This may never happen in 3C, but let's get it
