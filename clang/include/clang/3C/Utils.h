@@ -270,6 +270,18 @@ getLocationAfterToken(clang::SourceLocation SL, const clang::SourceManager &SM,
 // declaration has no initializer, then IncludeInitializer has no effect.
 clang::SourceRange getDeclSourceRangeWithAnnotations(const clang::Decl *D,
                                                      bool IncludeInitializer);
+// Function related to checking unsafe casts.
+bool isUnsafeCastInAllowedList(clang::QualType SrcType, clang::QualType DstType);
+
+std::string toLowerCase(std::string &Str);
+
+// Check if the provided type is a void pointer type.
+// This handles any depth of pointer types.
+bool isVoidPointerType(const clang::QualType &T);
+
+// Map to hold valid cast combinations along with whether the cast is
+// compatible or not.
+extern std::map<clang::QualType, std::tuple<clang::QualType, bool>> CastCombMap;
 
 // Shortcut for the getCustomDiagID + Report sequence to report a custom
 // diagnostic as we currently do in 3C.

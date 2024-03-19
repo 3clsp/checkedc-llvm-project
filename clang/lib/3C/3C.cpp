@@ -36,6 +36,7 @@ std::set<std::string> FilePaths;
 std::map<std::string, std::set<std::string>> ItypeCountVisitedFunctions;
 std::map<PersistentSourceLoc, std::map<std::string, std::set<std::string>>>
     ItypeCountVisitedFunctionsStatic;
+std::map<clang::QualType, std::tuple<clang::QualType, bool>> CastCombMap;
 
 struct _3COptions _3COpts;
 
@@ -366,6 +367,17 @@ _3CInterface::_3CInterface(const struct _3COptions &CCopt,
   GlobalProgramInfo = new ProgramInfo();
 
   ConstraintsBuilt = false;
+
+  // Sanity check.
+  // Only one of the following options can be true at a time.
+  // 1. IgnoreUnsafeCasts
+  // 2. KnownSafeCasts
+  if (_3COpts.IgnoreUnsafeCasts && !_3COpts.KnownSafeCasts.empty()) {
+    llvm::errs() << "Error: Only one of the options IgnoreUnsafeCasts and "
+                    "KnownSafeCasts can be true at a time.\n";
+    ConstructionFailed = true;
+    return;
+  }
 
   if (_3COpts.OutputPostfix != "-" && !_3COpts.OutputDir.empty()) {
     errs() << "3C initialization error: Cannot use both -output-postfix and "

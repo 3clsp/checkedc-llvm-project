@@ -137,6 +137,29 @@ CVarSet ConstraintResolver::getInvalidCastPVCons(CastExpr *E) {
   QualType DstType = E->getType();
   QualType SrcType = E->getSubExpr()->getType();
 
+  std::string SrcStr = SrcType.getAsString();
+  std::string DstStr = DstType.getAsString();
+  bool IsSrcVoidPtr = false;
+  bool IsDstVoidPtr = false;
+
+  IsSrcVoidPtr = isVoidPointerType(SrcType);
+  IsDstVoidPtr = isVoidPointerType(DstType);
+
+  // If --ignore-unsafe-casts is enabled and the src is not
+  // void* and the dst is not void* and isCastSafe
+  // returns false, then we ignroe this cast.
+  if (_3COpts.IgnoreUnsafeCasts && !IsSrcVoidPtr &&
+      !IsDstVoidPtr && !isCastSafe(DstType, SrcType)) {
+    return {};
+  }
+
+  // Check from a list of known casts.
+  if (!isCastSafe(DstType, SrcType)) {
+    // This function internally checks if the option is enabled.
+    if (isUnsafeCastInAllowedList(SrcType, DstType))
+      return {};
+  }
+
   auto *P = new PVConstraint(E, Info, *Context);
   PersistentSourceLoc PL = PersistentSourceLoc::mkPSL(E, *Context);
   std::string Rsn =

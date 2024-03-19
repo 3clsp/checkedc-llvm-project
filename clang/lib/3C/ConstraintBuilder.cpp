@@ -50,8 +50,31 @@ public:
     // Is cast compatible with LHS type?
     QualType SrcT = C->getSubExpr()->getType();
     QualType DstT = C->getType();
+    std::string SrcStr = SrcT.getAsString();
+    std::string DstStr = DstT.getAsString();
+    bool IsSrcVoidPtr = false;
+    bool IsDstVoidPtr = false;
+
+    IsSrcVoidPtr = isVoidPointerType(SrcT);
+    IsDstVoidPtr = isVoidPointerType(DstT);
+
     if (!CB.isCastofGeneric(C) && !isCastSafe(DstT, SrcT)
       && !Info.hasPersistentConstraints(C, Context)) {
+      // If ignore-unsafe-casts is present, and the src type is not
+      // void* and dst type is not void* and isCastSafe is false,
+      // then we can ignore the cast.
+      if (_3COpts.IgnoreUnsafeCasts && !IsSrcVoidPtr &&
+          !IsDstVoidPtr && !isCastSafe(DstT, SrcT)) {
+        return true;
+      }
+
+      // Check from a list of known casts.
+      if (!isCastSafe(DstT, SrcT)) {
+        // This function internally checks if the option is enabled.
+        if (isUnsafeCastInAllowedList(SrcT, DstT))
+          return true;
+      }
+
       auto CVs = CB.getExprConstraintVarsSet(C->getSubExpr());
       std::string Rsn =
           "Cast from " + SrcT.getAsString() + " to " + DstT.getAsString();

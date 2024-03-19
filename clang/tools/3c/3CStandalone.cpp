@@ -223,6 +223,27 @@ static cl::opt<bool> OptAllowRewriteFailures(
              "affect common use cases."),
     cl::init(false), cl::cat(_3CCategory));
 
+static cl::opt<bool> OptIgnoreUnsafeCasts(
+    "ignore-unsafe-casts",
+    cl::desc("Ignore unsafe casts in the code. These casts won't be considered "
+             "as root causes."),
+    cl::init(false), cl::cat(_3CCategory));
+
+static cl::opt<bool> OptConsiderCompatibleCasts(
+    "consider-compatible-casts",
+    cl::desc("If the cast between two types is compatible, then consider it as "
+             "a safe cast. This is useful when the code has a lot of casts "
+             "between compatible types."),
+    cl::init(false), cl::cat(_3CCategory));
+
+static cl::opt<std::string> OptKnownSafeCasts(
+    "known-safe-casts",
+    cl::desc("Known list of safe casts in the code. These casts won't be "
+             "considered as root causes. A key value pair of the form "
+              "src_type:dst_type separated by a comma. Same key allowed"
+              "multiple times."),
+    cl::init(""), cl::cat(_3CCategory));
+
 static cl::opt<bool> OptItypesForExtern(
     "itypes-for-extern",
     cl::desc("All functions with external linkage will be rewritten to use "
@@ -358,6 +379,9 @@ int main(int argc, const char **argv) {
   CcOptions.WarnRootCause = OptWarnRootCause;
   CcOptions.WarnAllRootCause = OptWarnAllRootCause;
   CcOptions.DumpUnwritableChanges = OptDumpUnwritableChanges;
+  CcOptions.IgnoreUnsafeCasts = OptIgnoreUnsafeCasts;
+  CcOptions.KnownSafeCasts = OptKnownSafeCasts;
+  CcOptions.ConsiderCompatibleCasts = OptConsiderCompatibleCasts;
   CcOptions.AllowUnwritableChanges = OptAllowUnwritableChanges;
   CcOptions.AllowRewriteFailures = OptAllowRewriteFailures;
   CcOptions.ItypesForExtern = OptItypesForExtern;

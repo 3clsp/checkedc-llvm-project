@@ -14,6 +14,9 @@
 #include "clang/AST/FormatString.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include <iostream>
 #include <errno.h>
 #include <clang/3C/ConstraintResolver.h>
 
@@ -371,6 +374,85 @@ bool hasVoidType(clang::ValueDecl *D) { return isTypeHasVoid(D->getType()); }
 //  return D->isPointerType() == S->isPointerType();
 //}
 
+static bool isRecordComparisonVisited(clang::QualType DstType,
+                                      clang::QualType SrcType) {
+  auto DstIt = CastCombMap.find(DstType);
+  if (DstIt != CastCombMap.end()) {
+    return std::get<0>(DstIt->second) == SrcType;
+  }
+
+  auto SrcIt = CastCombMap.find(SrcType);
+  if (SrcIt != CastCombMap.end()) {
+    return std::get<0>(SrcIt->second) == DstType;
+  }
+
+  return false;
+}
+
+static bool getRecordComparisonResult(clang::QualType DstType,
+                                      clang::QualType SrcType) {
+  auto DstIt = CastCombMap.find(DstType);
+  if (DstIt != CastCombMap.end()) {
+    return std::get<1>(DstIt->second);
+  }
+
+  auto SrcIt = CastCombMap.find(SrcType);
+  if (SrcIt != CastCombMap.end()) {
+    return std::get<1>(SrcIt->second);
+  }
+
+  return false;
+}
+
+static bool setRecordComparisonResult(clang::QualType DstType,
+                                      clang::QualType SrcType,
+                                      bool Result) {
+  auto DstIt = CastCombMap.find(DstType);
+  if (DstIt != CastCombMap.end()) {
+    std::get<1>(DstIt->second) = Result;
+    return true;
+  }
+
+  auto SrcIt = CastCombMap.find(SrcType);
+  if (SrcIt != CastCombMap.end()) {
+    std::get<1>(SrcIt->second) = Result;
+    return true;
+  }
+
+  CastCombMap[DstType] = std::make_tuple(SrcType, Result);
+  return true;
+}
+
+static bool castCheck(clang::QualType DstType, clang::QualType SrcType);
+static bool castCheckRecord(clang::QualType DstType,
+                            clang::QualType SrcType) {
+
+  // This should speed up the process of comparison.
+  // It should also prevent infinite recursion.
+  if (isRecordComparisonVisited(DstType, SrcType)) {
+    return getRecordComparisonResult(DstType, SrcType);
+  }
+
+  RecordDecl *DstRecord = DstType->getAs<RecordType>()->getDecl();
+  RecordDecl *SrcRecord = SrcType->getAs<RecordType>()->getDecl();
+
+  auto F1 = DstRecord->field_begin();
+  auto F2 = SrcRecord->field_begin();
+  auto E1 = DstRecord->field_end();
+  auto E2 = SrcRecord->field_end();
+
+  for (; F1 != E1 && F2 != E2; F1++, F2++) {
+    if (!castCheck((*F1)->getType(), (*F2)->getType()))
+      return false;
+  }
+
+  // It is fine if Src have more fields than Dst.
+  if (F1 == E1)
+    return true;
+
+  return false;
+}
+
 static bool castCheck(clang::QualType DstType, clang::QualType SrcType) {
 
   // Check if both types are same.
@@ -407,6 +489,16 @@ static bool castCheck(clang::QualType DstType, clang::QualType SrcType) {
         return false;
 
     return castCheck(SrcFnType->getReturnType(), DstFnType->getReturnType());
+  }
+
+  if (_3COpts.ConsiderCompatibleCasts) {
+    // Check if both are enums or records.
+    if ((SrcTypePtr->isUnionType() && DstTypePtr->isUnionType()) ||
+        (SrcTypePtr->isRecordType() && DstTypePtr->isRecordType())) {
+        bool Result = castCheckRecord(DstType, SrcType);
+        setRecordComparisonResult(DstType, SrcType, Result);
+        return Result;
+      }
   }
 
   // If both are not scalar types? Then the types must be exactly same.
@@ -492,6 +584,74 @@ unsigned longestCommonSubsequence(const char *X,
         }
     }
   return L[M][N];
+}
+
+std::string toLowerCase(std::string &Str) {
+  std::string StrCopy = Str;
+  std::transform(StrCopy.begin(), StrCopy.end(), StrCopy.begin(), ::tolower);
+  return StrCopy;
+}
+
+bool isUnsafeCastInAllowedList(clang::QualType SrcType, clang::QualType DstType) {
+
+  if (_3COpts.KnownSafeCasts.empty())
+    return false;
+
+  auto SameAsSrcType = [SrcType](std::string &Src) {
+    std::string SrcTypeStr = SrcType.getAsString();
+    return toLowerCase(SrcTypeStr) == toLowerCase(Src);
+  };
+
+  auto SameAsDstType = [DstType](std::string &Dst) {
+    std::string DstTypeStr = DstType.getAsString();
+    return toLowerCase(DstTypeStr) == toLowerCase(Dst);
+  };
+
+  // Open the JSON file
+  auto FileOrErr = MemoryBuffer::getFile(_3COpts.KnownSafeCasts);
+  if (!FileOrErr) {
+    errs() << "Error opening file: " << FileOrErr.getError().message() << "\n";
+    return false;
+  }
+
+  // Parse the JSON file
+  auto Buffer = FileOrErr.get()->getBuffer();
+  auto Json = json::parse(Buffer);
+
+  if (!Json) {
+    errs() << "Error parsing JSON: " << toString(Json.takeError()) << "\n";
+    return false;
+  }
+
+  // Process the JSON data
+  if (auto *Object = Json->getAsObject()) {
+    for (auto &Entry : *Object) {
+      std::string Key = Entry.getFirst().str();
+      std::string Value = Entry.getSecond().getAsString().getValue().str();
+      // If the SrcType and DstType are in the allowed list, return true.
+      if ((SameAsSrcType(Key) && SameAsDstType(Value)) ||
+          (SameAsSrcType(Value) && SameAsDstType(Key)))
+        return true;
+    }
+  } else {
+    errs() << "JSON is not an object\n";
+    return false;
+  }
+
+  return false;
+}
+
+bool isVoidPointerType(const clang::QualType &T) {
+    if (auto *PT = T->getAs<clang::PointerType>()) {
+      if (const auto *InnerType = PT->getPointeeType().getTypePtrOrNull()) {
+        if (InnerType->isVoidType()) {
+          return true;
+        } else {
+          return isVoidPointerType(clang::QualType(InnerType, 0));
+        }
+      }
+    }
+    return false;
 }
 
 bool isTypeAnonymous(const clang::Type *T) {

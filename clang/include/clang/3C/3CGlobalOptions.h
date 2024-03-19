@@ -51,6 +51,9 @@ struct _3COptions {
   bool DisableInfDecls;
   bool DisableArrH;
   bool DebugArrSolver;
+  bool IgnoreUnsafeCasts;
+  bool ConsiderCompatibleCasts;
+  std::string KnownSafeCasts;
 #ifdef FIVE_C
   bool RemoveItypes;
   bool ForceItypes;
