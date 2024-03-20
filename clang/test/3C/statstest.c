@@ -68,6 +68,6 @@ void j() {
 //CHECK_STDERR: NumCheckedCasts:0
 //CHECK_STDERR: NumWildCasts:0
 //CHECK_STDERR: NumFixedCasts:0
-//CHECK_STDERR: NumITypes:2
+//CHECK_STDERR: NumITypes:1
 //CHECK_STDERR: NumCheckedRegions:4
 //CHECK_STDERR: NumUnCheckedRegions:0

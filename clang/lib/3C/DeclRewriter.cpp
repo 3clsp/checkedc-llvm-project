@@ -75,7 +75,6 @@ DeclRewriter::buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
                              std::string UseName, ProgramInfo &Info,
                              ArrayBoundsRewriter &ABR, bool GenerateSDecls,
                              bool SDeclChecked) {
-  Info.getPerfStats().incrementNumITypes();
   std::string DeclName;
   bool NeedsFreshLowerBound =
       checkNeedsFreshLowerBound(Defn, UseName, Info, DeclName);
