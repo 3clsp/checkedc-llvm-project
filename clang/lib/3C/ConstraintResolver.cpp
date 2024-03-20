@@ -162,6 +162,7 @@ CVarSet ConstraintResolver::getInvalidCastPVCons(CastExpr *E) {
 
   auto *P = new PVConstraint(E, Info, *Context);
   PersistentSourceLoc PL = PersistentSourceLoc::mkPSL(E, *Context);
+  Info.getCIA().addCastInfo(DstStr, SrcStr, PL);
   std::string Rsn =
       "Cast from " + SrcType.getAsString() + " to " + DstType.getAsString();
   P->constrainToWild(Info.getConstraints(), ReasonLoc(Rsn, PL));

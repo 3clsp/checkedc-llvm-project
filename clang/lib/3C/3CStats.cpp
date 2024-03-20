@@ -230,3 +230,62 @@ bool StatsRecorder::VisitBoundsCastExpr(clang::BoundsCastExpr *B) {
   }
   return true;
 }
+
+void CastInfoAggregator::dumpStats(std::string FilePath) {
+  std::error_code EC;
+  llvm::raw_fd_ostream Output(FilePath, EC, llvm::sys::fs::F_Text);
+
+  if (!EC) {
+    Output << "[";
+    bool FirstOuter = true;
+    for (auto &It : getMap()) {
+
+      if (!FirstOuter)
+        Output << ",";
+      else
+        FirstOuter = false;
+
+      bool FirstInner = true;
+      Output << "{\"Dst\":\"" << It.Dst << "\",";
+      Output << "\"Src\":\"" << It.Src << "\",";
+      Output << "\"Locs\":[";
+      for (auto &L : It.Locs) {
+
+        if (!FirstInner)
+          Output << ",";
+        else
+          FirstInner = false;
+
+        Output << "{\"file\":\"" << L.getFileName() << "\",";
+        Output << "\"line\":" << L.getLineNo() << ",";
+        Output << "\"colstart\":" << L.getColSNo() << ",";
+        Output << "\"colend\":" << L.getColENo() << "}";
+      }
+      Output << "]}";
+    }
+    Output << "]";
+  }
+}
+
+void CastInfoAggregator::addCastInfo(std::string &Dst, std::string &Src,
+                                     PersistentSourceLoc &Loc) {
+  std::vector<CastInfoMapType> &M = getMap();
+
+  // Check if the cast already exists.
+  for (auto &It : M) {
+    if (It.Dst == Dst && It.Src == Src) {
+      It.Locs.push_back(Loc);
+      return;
+    } else if (It.Dst == Src && It.Src == Dst) {
+      It.Locs.push_back(Loc);
+      return;
+    }
+  }
+  // Insert a new entry.
+  CastInfoMapType C;
+  C.Dst = Dst;
+  C.Src = Src;
+  C.Locs.push_back(Loc);
+  M.push_back(C);
+  return;
+}

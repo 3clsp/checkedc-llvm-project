@@ -16,6 +16,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "llvm/Support/raw_ostream.h"
+#include "clang/3C/PersistentSourceLoc.h"
 
 #define RETVAR "$ret"
 
@@ -106,6 +107,27 @@ public:
 private:
   clang::ASTContext *Context;
   ProgramInfo *Info;
+};
+
+template <typename T>
+class RootCauseAggregator {
+  public:
+    virtual void dumpStats(std::string FilePath) = 0;
+    std::vector<T> &getMap() { return Map; }
+  private:
+    std::vector<T> Map;
+};
+
+struct CastInfoMapType {
+  std::string Dst;
+  std::string Src;
+  std::vector<PersistentSourceLoc> Locs;
+};
+
+class CastInfoAggregator : public RootCauseAggregator<CastInfoMapType> {
+  public:
+    void dumpStats(std::string FilePath) override;
+    void addCastInfo(std::string &Dst, std::string &Src, PersistentSourceLoc &Loc);
 };
 
 #endif // LLVM_CLANG_3C_3CSTATS_H

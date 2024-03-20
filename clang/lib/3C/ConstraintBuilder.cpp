@@ -75,6 +75,9 @@ public:
           return true;
       }
 
+      PersistentSourceLoc PSL = PersistentSourceLoc::mkPSL(C, *Context);
+      Info.getCIA().addCastInfo(DstStr, SrcStr, PSL);
+
       auto CVs = CB.getExprConstraintVarsSet(C->getSubExpr());
       std::string Rsn =
           "Cast from " + SrcT.getAsString() + " to " + DstT.getAsString();

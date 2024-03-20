@@ -179,6 +179,8 @@ public:
   void addTypedef(PersistentSourceLoc PSL, TypedefDecl *TD,
                   ASTContext &C) override;
 
+  CastInfoAggregator &getCIA() { return CIA; }
+
   // Store mapping from ASTContexts to a unique index in the ASTs vector in
   // the ProgramInfo object. This function must be called prior to any AST
   // traversals so that the map is populated.
@@ -257,6 +259,9 @@ private:
   // in this map are used as part of the IDAndTranslationUnit which is the type
   // used as keys for maps from ASTNodes.
   std::map<ASTContext *, unsigned int> TranslationUnitIdxMap;
+
+  // This class collects all invalid cast information that can  later be dumped.
+  CastInfoAggregator CIA;
 
   // Inserts the given FVConstraint set into the extern or static function map.
   // Returns the merged version if it was a redeclaration, or the constraint
