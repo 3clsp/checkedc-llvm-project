@@ -107,14 +107,18 @@ std::error_code tryGetCanonicalFilePath(const std::string &FileName,
                                         std::string &AbsoluteFp);
 
 // Keep track of global functions already visited.
-extern std::map<std::string, std::set<std::string>> ItypeCountVisitedFunctions;
-// Keep track of static functions already visited per AST.
+extern std::map<PersistentSourceLoc, std::map<std::string, std::set<std::string>>>
+    ItypeCountVisitedFunctions;
+// Keep track of static functions already visited per PSL.
 extern std::map<PersistentSourceLoc, std::map<std::string, std::set<std::string>>>
     ItypeCountVisitedFunctionsStatic;
 
-bool isFunctionRetOrParamVisited(std::string FuncName, std::string VarName);
-void markFunctionRetOrParamVisited(std::string FuncName, std::string VarName);
-void unmarkFunctionRetOrParamVisited(std::string FuncName, std::string VarName);
+bool isFunctionRetOrParamVisitedG(std::string FuncName, std::string VarName,
+                                  PersistentSourceLoc PSL);
+void markFunctionRetOrParamVisitedG(std::string FuncName, std::string VarName,
+                                    PersistentSourceLoc PSL);
+void unmarkFunctionRetOrParamVisitedG(std::string FuncName, std::string VarName,
+                                      PersistentSourceLoc PSL);
 
 bool isFunctionRetOrParamVisited(std::string FuncName, std::string VarName,
                                  PersistentSourceLoc PSL);

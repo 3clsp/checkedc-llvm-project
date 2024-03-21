@@ -140,7 +140,14 @@ bool StatsRecorder::VisitCompoundStmt(clang::CompoundStmt *S) {
 bool StatsRecorder::VisitDecl(clang::Decl *D) {
   auto &PStats = Info->getPerfStats();
   
-  auto StaticMarker = [this, &PStats](std::string FuncName, std::string VarName, PersistentSourceLoc PSL) -> void {
+  auto StaticMarker = [this, &PStats](std::string FuncName, std::string VarName,
+                                      FunctionDecl *FD) -> void {
+    PersistentSourceLoc PSL;
+    FunctionDecl *FDef = FD->getDefinition();
+    if (FDef) {
+      PSL = PersistentSourceLoc::mkPSL(FDef, *Context);
+    }
+
     if (isFunctionRetOrParamVisited(FuncName, VarName, PSL)) {
       return;
     }
@@ -148,11 +155,22 @@ bool StatsRecorder::VisitDecl(clang::Decl *D) {
     PStats.incrementNumITypes();
   };
 
-  auto GlobalMarker = [&PStats](std::string FuncName, std::string VarName) -> void {
-    if (isFunctionRetOrParamVisited(FuncName, VarName)) {
+  auto GlobalMarker = [this, &PStats](std::string FuncName, std::string VarName,
+                                FunctionDecl *FD) -> void {
+    PersistentSourceLoc PSL;
+    FunctionDecl *FDecl = getDeclaration(FD);
+    if (FDecl) {
+      PSL = PersistentSourceLoc::mkPSL(FDecl, *Context);
+    } else {
+      FunctionDecl *FDef = FD->getDefinition();
+      if (FDef) {
+        PSL = PersistentSourceLoc::mkPSL(FDef, *Context);
+      }
+    }
+    if (isFunctionRetOrParamVisitedG(FuncName, VarName, PSL)) {
       return;
     }
-    markFunctionRetOrParamVisited(FuncName, VarName);
+    markFunctionRetOrParamVisitedG(FuncName, VarName, PSL);
     PStats.incrementNumITypes();
   };
 
@@ -168,12 +186,9 @@ bool StatsRecorder::VisitDecl(clang::Decl *D) {
             // it to the function visited map along with the return type.
             bool IsStatic = !FD->isGlobal();
             if (IsStatic) {
-              auto DefPSL = PersistentSourceLoc::mkPSL(FD, *Context);
-              StaticMarker(FD->getNameAsString(), RETVAR, DefPSL);
+              StaticMarker(FD->getNameAsString(), RETVAR, FD);
             } else {
-              // If the FunctionDecl is not static, then we add it to the global
-              // function visited map along with the return type.
-              GlobalMarker(FD->getNameAsString(), RETVAR);
+              GlobalMarker(FD->getNameAsString(), RETVAR, FD);
             }
           } else if (ParmVarDecl *PVD = dyn_cast<ParmVarDecl>(DD)) {
             // If it is a ParmVarDecl, then we add it to the function visited
@@ -183,14 +198,11 @@ bool StatsRecorder::VisitDecl(clang::Decl *D) {
               if (FunctionDecl *FD = dyn_cast<FunctionDecl>(DC)) {
                 bool IsStatic = !FD->isGlobal();
                 if (IsStatic) {
-                  FunctionDecl *FDef = FD->getDefinition();
-                  // static function should be defined in the same file.
-                  if (FDef) {
-                    auto DefPSL = PersistentSourceLoc::mkPSL(FDef, *Context);
-                    StaticMarker(FDef->getNameAsString(), PVD->getNameAsString(), DefPSL);
-                  }
+                  StaticMarker(FD->getNameAsString(), PVD->getNameAsString(),
+                               FD);
                 } else {
-                  GlobalMarker(FD->getNameAsString(), PVD->getNameAsString());
+                  GlobalMarker(FD->getNameAsString(), PVD->getNameAsString(),
+                               FD);
                 }
               }
             }

@@ -167,21 +167,28 @@ std::error_code tryGetCanonicalFilePath(const std::string &FileName,
   return EC;
 }
 
-bool isFunctionRetOrParamVisited(std::string FuncName, std::string VarName) {
-  if (ItypeCountVisitedFunctions.find(FuncName) != ItypeCountVisitedFunctions.end()) {
-    return ItypeCountVisitedFunctions[FuncName].find(VarName) !=
-           ItypeCountVisitedFunctions[FuncName].end();
+bool isFunctionRetOrParamVisitedG(std::string FuncName, std::string VarName,
+                                 PersistentSourceLoc PSL) {
+  if (ItypeCountVisitedFunctions.find(PSL) != ItypeCountVisitedFunctions.end()) {
+    if (ItypeCountVisitedFunctions[PSL].find(FuncName) != 
+        ItypeCountVisitedFunctions[PSL].end()) {
+      return ItypeCountVisitedFunctions[PSL][FuncName].find(VarName) !=
+             ItypeCountVisitedFunctions[PSL][FuncName].end();
+    }
   }
   return false;
 }
 
-void markFunctionRetOrParamVisited(std::string FuncName, std::string VarName) {
-    ItypeCountVisitedFunctions[FuncName].insert(VarName);
+void markFunctionRetOrParamVisitedG(std::string FuncName, std::string VarName,
+                                   PersistentSourceLoc PSL) {
+    ItypeCountVisitedFunctions[PSL][FuncName].insert(VarName);
 }
 
-void unmarkFunctionRetOrParamVisited(std::string FuncName, std::string VarName) {
-  auto &VarSet = ItypeCountVisitedFunctions[FuncName];
-  VarSet.erase(VarName);
+void unmarkFunctionRetOrParamVisitedG(std::string FuncName, std::string VarName,
+                                     PersistentSourceLoc PSL) {
+    auto &FuncMap = ItypeCountVisitedFunctions[PSL];
+    auto &VarSet = FuncMap[FuncName];
+    VarSet.erase(VarName);
 }
 
 bool isFunctionRetOrParamVisited(std::string FuncName, std::string VarName,
@@ -495,11 +502,15 @@ static bool castCheck(clang::QualType DstType, clang::QualType SrcType) {
     // Check if both are enums or records.
     if ((SrcTypePtr->isUnionType() && DstTypePtr->isUnionType()) ||
         (SrcTypePtr->isRecordType() && DstTypePtr->isRecordType())) {
-        bool Result = castCheckRecord(DstType, SrcType);
-        setRecordComparisonResult(DstType, SrcType, Result);
-        return Result;
-      }
+      bool Result = castCheckRecord(DstType, SrcType);
+      setRecordComparisonResult(DstType, SrcType, Result);
+      return Result;
+    }
   }
+
+  // If either of them are void, then the cast is unsafe.
+  if (SrcTypePtr->isVoidType() || DstTypePtr->isVoidType())
+    return false;
 
   // If both are not scalar types? Then the types must be exactly same.
   if (!(SrcTypePtr->isScalarType() && DstTypePtr->isScalarType()))

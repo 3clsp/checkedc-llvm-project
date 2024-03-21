@@ -909,9 +909,23 @@ FunctionDeclBuilder::buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
       }
     }
   } else {
-    if (!isFunctionRetOrParamVisited(FuncName, UseName)) {
-      Info.getPerfStats().incrementNumITypes();
-      markFunctionRetOrParamVisited(FuncName, UseName);
+    FunctionDecl *FDecl = getDeclaration(FD);
+    if (FDecl) {
+      auto PSL = PersistentSourceLoc::mkPSL(FDecl, *Context);
+      if (!isFunctionRetOrParamVisitedG(FuncName, QualName, PSL)) {
+        Info.getPerfStats().incrementNumITypes();
+        markFunctionRetOrParamVisitedG(FuncName, QualName, PSL);
+      }
+    } else {
+      // Use function definition location if we can't find a declaration.
+      FunctionDecl *FDef = FD->getDefinition();
+      if (FDef) {
+        auto PSL = PersistentSourceLoc::mkPSL(FDef, *Context);
+        if (!isFunctionRetOrParamVisitedG(FuncName, QualName, PSL)) {
+          Info.getPerfStats().incrementNumITypes();
+          markFunctionRetOrParamVisitedG(FuncName, QualName, PSL);
+        }
+      }
     }
   }
   RewrittenDecl RD = DeclRewriter::buildItypeDecl(
@@ -955,9 +969,24 @@ FunctionDeclBuilder::buildDeclVar(const FVComponentVariable *CV,
         }
       }
     } else {
-      if (isFunctionRetOrParamVisited(FuncName, QualName)) {
-        Info.getPerfStats().decrementNumITypes();
-        unmarkFunctionRetOrParamVisited(FuncName, QualName);
+      FunctionDecl *FDecl = getDeclaration(FD);
+      if (FDecl) {
+        auto PSL = PersistentSourceLoc::mkPSL(FDecl, *Context);
+        if (isFunctionRetOrParamVisitedG(FuncName, QualName, PSL)) {
+          Info.getPerfStats().decrementNumITypes();
+          unmarkFunctionRetOrParamVisitedG(FuncName, QualName, PSL);
+        }
+      } else {
+        // Use function definition location if we can't find a declaration.
+        FunctionDecl *FDef = FD->getDefinition();
+        if (FDef) {
+          auto PSL = PersistentSourceLoc::mkPSL(FDef, *Context);
+          if (isFunctionRetOrParamVisitedG(FuncName, QualName, PSL)) {
+            Info.getPerfStats().decrementNumITypes();
+            unmarkFunctionRetOrParamVisitedG(FuncName, QualName, PSL);
+          }
+        }
+      
       }
     }
     return buildCheckedDecl(CV->getExternal(), Decl, UseName, RewriteParm,
