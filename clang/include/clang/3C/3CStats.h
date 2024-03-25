@@ -109,22 +109,27 @@ private:
   ProgramInfo *Info;
 };
 
+// Base class to store aggregated data for root cause analysis.
+// The data stored depends on the template parameter.
 template <typename T>
 class RootCauseAggregator {
   public:
     virtual void dumpStats(std::string FilePath) = 0;
-    std::vector<T> &getMap() { return Map; }
+    T &getData() { return Data; }
   private:
-    std::vector<T> Map;
+    T Data;
 };
 
+// Type to store invalid cast information.
+// Can be made into a map of pair to vector of locations if needed.
 struct CastInfoMapType {
   std::string Dst;
   std::string Src;
   std::vector<PersistentSourceLoc> Locs;
 };
 
-class CastInfoAggregator : public RootCauseAggregator<CastInfoMapType> {
+// Aggregator for invliad cast information.
+class CastInfoAggregator : public RootCauseAggregator<std::vector<CastInfoMapType>> {
   public:
     void dumpStats(std::string FilePath) override;
     void addCastInfo(std::string &Dst, std::string &Src, PersistentSourceLoc &Loc);

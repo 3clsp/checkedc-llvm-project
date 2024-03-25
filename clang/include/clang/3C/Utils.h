@@ -106,26 +106,23 @@ std::string getStorageQualifierString(clang::Decl *D);
 std::error_code tryGetCanonicalFilePath(const std::string &FileName,
                                         std::string &AbsoluteFp);
 
-// Keep track of global functions already visited.
+
+// Map used to keep track of all function visited for itype counting.
+// It maps from PSL of function definition for static functions and
+// PSL of function declaration or definition depending on availability
+// for global functions. 
 extern std::map<PersistentSourceLoc, std::map<std::string, std::set<std::string>>>
     ItypeCountVisitedFunctions;
-// Keep track of static functions already visited per PSL.
-extern std::map<PersistentSourceLoc, std::map<std::string, std::set<std::string>>>
-    ItypeCountVisitedFunctionsStatic;
-
-bool isFunctionRetOrParamVisitedG(std::string FuncName, std::string VarName,
-                                  PersistentSourceLoc PSL);
-void markFunctionRetOrParamVisitedG(std::string FuncName, std::string VarName,
-                                    PersistentSourceLoc PSL);
-void unmarkFunctionRetOrParamVisitedG(std::string FuncName, std::string VarName,
-                                      PersistentSourceLoc PSL);
 
 bool isFunctionRetOrParamVisited(std::string FuncName, std::string VarName,
-                                 PersistentSourceLoc PSL);
+                                 clang::FunctionDecl *FD, clang::ASTContext &C,
+                                 bool TryDecl=false);
 void markFunctionRetOrParamVisited(std::string FuncName, std::string VarName,
-                                   PersistentSourceLoc PSL);
+                                   clang::FunctionDecl *FD, clang::ASTContext &C,
+                                   bool TryDecl=false);
 void unmarkFunctionRetOrParamVisited(std::string FuncName, std::string VarName,
-                                     PersistentSourceLoc PSL);
+                                     clang::FunctionDecl *FD, clang::ASTContext &C,
+                                     bool TryDecl=false);
 
 // This compares entire path components: it's smart enough to know that "foo.c"
 // does not start with "foo". It's not smart about anything else, so you should
@@ -285,7 +282,7 @@ bool isVoidPointerType(const clang::QualType &T);
 
 // Map to hold valid cast combinations along with whether the cast is
 // compatible or not.
-extern std::map<clang::QualType, std::tuple<clang::QualType, bool>> CastCombMap;
+extern std::map<std::pair<clang::QualType, clang::QualType>, bool> CastCombMap;
 
 // Shortcut for the getCustomDiagID + Report sequence to report a custom
 // diagnostic as we currently do in 3C.

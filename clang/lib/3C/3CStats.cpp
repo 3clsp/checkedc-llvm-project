@@ -142,35 +142,19 @@ bool StatsRecorder::VisitDecl(clang::Decl *D) {
   
   auto StaticMarker = [this, &PStats](std::string FuncName, std::string VarName,
                                       FunctionDecl *FD) -> void {
-    PersistentSourceLoc PSL;
-    FunctionDecl *FDef = FD->getDefinition();
-    if (FDef) {
-      PSL = PersistentSourceLoc::mkPSL(FDef, *Context);
-    }
-
-    if (isFunctionRetOrParamVisited(FuncName, VarName, PSL)) {
+    if (isFunctionRetOrParamVisited(FuncName, VarName, FD, *Context)) {
       return;
     }
-    markFunctionRetOrParamVisited(FuncName, VarName, PSL);
+    markFunctionRetOrParamVisited(FuncName, VarName, FD, *Context);
     PStats.incrementNumITypes();
   };
 
   auto GlobalMarker = [this, &PStats](std::string FuncName, std::string VarName,
                                 FunctionDecl *FD) -> void {
-    PersistentSourceLoc PSL;
-    FunctionDecl *FDecl = getDeclaration(FD);
-    if (FDecl) {
-      PSL = PersistentSourceLoc::mkPSL(FDecl, *Context);
-    } else {
-      FunctionDecl *FDef = FD->getDefinition();
-      if (FDef) {
-        PSL = PersistentSourceLoc::mkPSL(FDef, *Context);
-      }
-    }
-    if (isFunctionRetOrParamVisitedG(FuncName, VarName, PSL)) {
+    if (isFunctionRetOrParamVisited(FuncName, VarName, FD, *Context, true)) {
       return;
     }
-    markFunctionRetOrParamVisitedG(FuncName, VarName, PSL);
+    markFunctionRetOrParamVisited(FuncName, VarName, FD, *Context, true);
     PStats.incrementNumITypes();
   };
 
@@ -250,7 +234,7 @@ void CastInfoAggregator::dumpStats(std::string FilePath) {
   if (!EC) {
     Output << "[";
     bool FirstOuter = true;
-    for (auto &It : getMap()) {
+    for (auto &It : getData()) {
 
       if (!FirstOuter)
         Output << ",";
@@ -281,7 +265,7 @@ void CastInfoAggregator::dumpStats(std::string FilePath) {
 
 void CastInfoAggregator::addCastInfo(std::string &Dst, std::string &Src,
                                      PersistentSourceLoc &Loc) {
-  std::vector<CastInfoMapType> &M = getMap();
+  std::vector<CastInfoMapType> &M = getData();
 
   // Check if the cast already exists.
   for (auto &It : M) {

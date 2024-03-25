@@ -167,8 +167,28 @@ std::error_code tryGetCanonicalFilePath(const std::string &FileName,
   return EC;
 }
 
-bool isFunctionRetOrParamVisitedG(std::string FuncName, std::string VarName,
-                                 PersistentSourceLoc PSL) {
+static PersistentSourceLoc getPSLFromFD(clang::FunctionDecl *FD,
+                                        clang::ASTContext &C,
+                                        bool TryDecl) {
+  FunctionDecl *NewFD;
+
+  // Get the function declaration.
+  NewFD = getDefinition(FD);
+  if (NewFD == nullptr) {
+    // If we are allowed to try the declaration, then try to get it.
+    if (TryDecl)
+      NewFD = getDeclaration(FD);
+    else
+      return PersistentSourceLoc();
+  }
+
+  return PersistentSourceLoc::mkPSL(NewFD, C);
+}
+
+bool isFunctionRetOrParamVisited(std::string FuncName, std::string VarName,
+                                 clang::FunctionDecl *FD, clang::ASTContext &C,
+                                 bool TryDecl) {
+  PersistentSourceLoc PSL = getPSLFromFD(FD, C, TryDecl);
   if (ItypeCountVisitedFunctions.find(PSL) != ItypeCountVisitedFunctions.end()) {
     if (ItypeCountVisitedFunctions[PSL].find(FuncName) != 
         ItypeCountVisitedFunctions[PSL].end()) {
@@ -179,38 +199,18 @@ bool isFunctionRetOrParamVisitedG(std::string FuncName, std::string VarName,
   return false;
 }
 
-void markFunctionRetOrParamVisitedG(std::string FuncName, std::string VarName,
-                                   PersistentSourceLoc PSL) {
-    ItypeCountVisitedFunctions[PSL][FuncName].insert(VarName);
-}
-
-void unmarkFunctionRetOrParamVisitedG(std::string FuncName, std::string VarName,
-                                     PersistentSourceLoc PSL) {
-    auto &FuncMap = ItypeCountVisitedFunctions[PSL];
-    auto &VarSet = FuncMap[FuncName];
-    VarSet.erase(VarName);
-}
-
-bool isFunctionRetOrParamVisited(std::string FuncName, std::string VarName,
-                                 PersistentSourceLoc PSL) {
-  if (ItypeCountVisitedFunctionsStatic.find(PSL) != ItypeCountVisitedFunctionsStatic.end()) {
-    if (ItypeCountVisitedFunctionsStatic[PSL].find(FuncName) != 
-        ItypeCountVisitedFunctionsStatic[PSL].end()) {
-      return ItypeCountVisitedFunctionsStatic[PSL][FuncName].find(VarName) !=
-             ItypeCountVisitedFunctionsStatic[PSL][FuncName].end();
-    }
-  }
-  return false;
-}
-
 void markFunctionRetOrParamVisited(std::string FuncName, std::string VarName,
-                                   PersistentSourceLoc PSL) {
-    ItypeCountVisitedFunctionsStatic[PSL][FuncName].insert(VarName);
+                                   clang::FunctionDecl *FD, clang::ASTContext &C,
+                                   bool TryDecl) {
+  PersistentSourceLoc PSL = getPSLFromFD(FD, C, TryDecl);
+  ItypeCountVisitedFunctions[PSL][FuncName].insert(VarName);
 }
 
 void unmarkFunctionRetOrParamVisited(std::string FuncName, std::string VarName,
-                                     PersistentSourceLoc PSL) {
-    auto &FuncMap = ItypeCountVisitedFunctionsStatic[PSL];
+                                     clang::FunctionDecl *FD, clang::ASTContext &C,
+                                     bool TryDecl) {
+    PersistentSourceLoc PSL = getPSLFromFD(FD, C, TryDecl);
+    auto &FuncMap = ItypeCountVisitedFunctions[PSL];
     auto &VarSet = FuncMap[FuncName];
     VarSet.erase(VarName);
 }
@@ -383,50 +383,48 @@ bool hasVoidType(clang::ValueDecl *D) { return isTypeHasVoid(D->getType()); }
 
 static bool isRecordComparisonVisited(clang::QualType DstType,
                                       clang::QualType SrcType) {
-  auto DstIt = CastCombMap.find(DstType);
-  if (DstIt != CastCombMap.end()) {
-    return std::get<0>(DstIt->second) == SrcType;
+  auto DstSrc = std::make_pair(DstType, SrcType);
+  if (CastCombMap.find(DstSrc) != CastCombMap.end()) {
+    return true;
   }
 
-  auto SrcIt = CastCombMap.find(SrcType);
-  if (SrcIt != CastCombMap.end()) {
-    return std::get<0>(SrcIt->second) == DstType;
+  auto SrcDst = std::make_pair(SrcType, DstType);
+  if (CastCombMap.find(SrcDst) != CastCombMap.end()) {
+    return true;
   }
-
   return false;
 }
 
 static bool getRecordComparisonResult(clang::QualType DstType,
                                       clang::QualType SrcType) {
-  auto DstIt = CastCombMap.find(DstType);
-  if (DstIt != CastCombMap.end()) {
-    return std::get<1>(DstIt->second);
+  auto DstSrc = std::make_pair(DstType, SrcType);
+  if (CastCombMap.find(DstSrc) != CastCombMap.end()) {
+    return CastCombMap[DstSrc];
   }
 
-  auto SrcIt = CastCombMap.find(SrcType);
-  if (SrcIt != CastCombMap.end()) {
-    return std::get<1>(SrcIt->second);
+  auto SrcDst = std::make_pair(SrcType, DstType);
+  if (CastCombMap.find(SrcDst) != CastCombMap.end()) {
+    return CastCombMap[SrcDst];
   }
-
   return false;
 }
 
 static bool setRecordComparisonResult(clang::QualType DstType,
                                       clang::QualType SrcType,
                                       bool Result) {
-  auto DstIt = CastCombMap.find(DstType);
-  if (DstIt != CastCombMap.end()) {
-    std::get<1>(DstIt->second) = Result;
+  auto DstSrc = std::make_pair(DstType, SrcType);
+  if (CastCombMap.find(DstSrc) != CastCombMap.end()) {
+    CastCombMap[DstSrc] = Result;
     return true;
   }
 
-  auto SrcIt = CastCombMap.find(SrcType);
-  if (SrcIt != CastCombMap.end()) {
-    std::get<1>(SrcIt->second) = Result;
+  auto SrcDst = std::make_pair(SrcType, DstType);
+  if (CastCombMap.find(SrcDst) != CastCombMap.end()) {
+    CastCombMap[SrcDst] = Result;
     return true;
   }
-
-  CastCombMap[DstType] = std::make_tuple(SrcType, Result);
+  // By default we store in as Dst -> Src.
+  CastCombMap[DstSrc] = Result;
   return true;
 }
 

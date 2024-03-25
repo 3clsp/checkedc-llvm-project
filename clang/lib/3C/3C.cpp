@@ -35,9 +35,7 @@ using namespace llvm;
 std::set<std::string> FilePaths;
 std::map<PersistentSourceLoc, std::map<std::string, std::set<std::string>>>
     ItypeCountVisitedFunctions;
-std::map<PersistentSourceLoc, std::map<std::string, std::set<std::string>>>
-    ItypeCountVisitedFunctionsStatic;
-std::map<clang::QualType, std::tuple<clang::QualType, bool>> CastCombMap;
+std::map<std::pair<clang::QualType, clang::QualType>, bool> CastCombMap;
 
 struct _3COptions _3COpts;
 

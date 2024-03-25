@@ -900,32 +900,14 @@ FunctionDeclBuilder::buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
   // Don't increment the number of itypes if we've already visited this function.
   std::string QualName = UseName == "" ? RETVAR : UseName;
   if (StaticFunc) {
-    FunctionDecl *FDef = FD->getDefinition();
-    if (FDef) {
-      auto PSL = PersistentSourceLoc::mkPSL(FDef, *Context);
-      if (!isFunctionRetOrParamVisited(FuncName, QualName, PSL)) {
-        Info.getPerfStats().incrementNumITypes();
-        markFunctionRetOrParamVisited(FuncName, QualName, PSL);
-      }
+    if (!isFunctionRetOrParamVisited(FuncName, QualName, FD, *Context)) {
+      Info.getPerfStats().incrementNumITypes();
+      markFunctionRetOrParamVisited(FuncName, QualName, FD, *Context);
     }
   } else {
-    FunctionDecl *FDecl = getDeclaration(FD);
-    if (FDecl) {
-      auto PSL = PersistentSourceLoc::mkPSL(FDecl, *Context);
-      if (!isFunctionRetOrParamVisitedG(FuncName, QualName, PSL)) {
-        Info.getPerfStats().incrementNumITypes();
-        markFunctionRetOrParamVisitedG(FuncName, QualName, PSL);
-      }
-    } else {
-      // Use function definition location if we can't find a declaration.
-      FunctionDecl *FDef = FD->getDefinition();
-      if (FDef) {
-        auto PSL = PersistentSourceLoc::mkPSL(FDef, *Context);
-        if (!isFunctionRetOrParamVisitedG(FuncName, QualName, PSL)) {
-          Info.getPerfStats().incrementNumITypes();
-          markFunctionRetOrParamVisitedG(FuncName, QualName, PSL);
-        }
-      }
+    if (!isFunctionRetOrParamVisited(FuncName, QualName, FD, *Context, true)) {
+      Info.getPerfStats().incrementNumITypes();
+      markFunctionRetOrParamVisited(FuncName, QualName, FD, *Context, true);
     }
   }
   RewrittenDecl RD = DeclRewriter::buildItypeDecl(
@@ -960,33 +942,14 @@ FunctionDeclBuilder::buildDeclVar(const FVComponentVariable *CV,
     // This occurs when we had an itype in source but 3C inferred a checked
     // solution.
     if (StaticFunc) {
-      FunctionDecl *FDef = FD->getDefinition();
-      if (FDef) {
-        auto PSL = PersistentSourceLoc::mkPSL(FDef, *Context);
-        if (isFunctionRetOrParamVisited(FuncName, QualName, PSL)) {
-          Info.getPerfStats().decrementNumITypes();
-          unmarkFunctionRetOrParamVisited(FuncName, QualName, PSL);
-        }
+      if (isFunctionRetOrParamVisited(FuncName, QualName, FD, *Context)) {
+        Info.getPerfStats().decrementNumITypes();
+        unmarkFunctionRetOrParamVisited(FuncName, QualName, FD, *Context);
       }
     } else {
-      FunctionDecl *FDecl = getDeclaration(FD);
-      if (FDecl) {
-        auto PSL = PersistentSourceLoc::mkPSL(FDecl, *Context);
-        if (isFunctionRetOrParamVisitedG(FuncName, QualName, PSL)) {
-          Info.getPerfStats().decrementNumITypes();
-          unmarkFunctionRetOrParamVisitedG(FuncName, QualName, PSL);
-        }
-      } else {
-        // Use function definition location if we can't find a declaration.
-        FunctionDecl *FDef = FD->getDefinition();
-        if (FDef) {
-          auto PSL = PersistentSourceLoc::mkPSL(FDef, *Context);
-          if (isFunctionRetOrParamVisitedG(FuncName, QualName, PSL)) {
-            Info.getPerfStats().decrementNumITypes();
-            unmarkFunctionRetOrParamVisitedG(FuncName, QualName, PSL);
-          }
-        }
-      
+      if (isFunctionRetOrParamVisited(FuncName, QualName, FD, *Context, true)) {
+        Info.getPerfStats().decrementNumITypes();
+        unmarkFunctionRetOrParamVisited(FuncName, QualName, FD, *Context, true);
       }
     }
     return buildCheckedDecl(CV->getExternal(), Decl, UseName, RewriteParm,
