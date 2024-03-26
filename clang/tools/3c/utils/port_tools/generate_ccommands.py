@@ -160,12 +160,13 @@ def run3C(checkedc_bin,
         if not is_valid_file_extension(file_to_add):
             continue  # Checked C extension doesn't support cpp files yet
 
-        # BEAR uses relative paths for 'file' rather than absolute paths. It
-        # also has a field called 'arguments' instead of 'command' in the cmake
-        # style. Use that to detect BEAR and add the directory.
+        # BEAR may use relative paths or absolute paths for 'file'. 
+        # It also has a field called 'arguments' instead of 'command' in the
+        # cmake style. Use that to detect BEAR and add the directory.
         if 'arguments' in i and not 'command' in i:
             # BEAR. Need to add directory.
-            file_to_add = i['directory'] + SLASH + file_to_add
+            if not os.path.isabs(file_to_add):
+                file_to_add = i['directory'] + SLASH + file_to_add
             compiler_path = i['arguments'][0]
             # get the compiler arguments
             (compiler_x_args,
