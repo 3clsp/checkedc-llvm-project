@@ -149,12 +149,12 @@ CVarSet ConstraintResolver::getInvalidCastPVCons(CastExpr *E) {
   // void* and the dst is not void* and isCastSafe
   // returns false, then we ignroe this cast.
   if (_3COpts.IgnoreUnsafeCasts && !IsSrcVoidPtr &&
-      !IsDstVoidPtr && !isCastSafe(DstType, SrcType)) {
+      !IsDstVoidPtr && !isCastSafe(DstType, SrcType, *Context)) {
     return {};
   }
 
   // Check from a list of known casts.
-  if (!isCastSafe(DstType, SrcType)) {
+  if (!isCastSafe(DstType, SrcType, *Context)) {
     // This function internally checks if the option is enabled.
     if (isUnsafeCastInAllowedList(SrcType, DstType))
       return {};
@@ -267,7 +267,7 @@ CSetBkeyPair ConstraintResolver::getExprConstraintVars(Expr *E) {
       if (TypE->isPointerType() &&
           !(SubTypE->isFunctionType() || SubTypE->isArrayType() ||
             SubTypE->isVoidPointerType()) &&
-          !isCastSafe(TypE, SubTypE)) {
+          !isCastSafe(TypE, SubTypE, *Context)) {
         CVarSet WildCVar = getInvalidCastPVCons(IE);
         auto Rsn = ReasonLoc("Unsafe cast",ExprPSL);
         constrainConsVarGeq(CVs.first, WildCVar, CS, Rsn, Safe_to_Wild,
@@ -285,7 +285,7 @@ CSetBkeyPair ConstraintResolver::getExprConstraintVars(Expr *E) {
       // handle it as usual so the type in the cast can be rewritten.
       auto Rsn = ReasonLoc("Explicit cast", ExprPSL);
       if (!isNULLExpression(ECE, *Context) && TypE->isPointerType() &&
-          !isCastSafe(TypE, TmpE->getType()) && !isCastofGeneric(ECE)) {
+          !isCastSafe(TypE, TmpE->getType(), *Context) && !isCastofGeneric(ECE)) {
         CVarSet Vars = getExprConstraintVarsSet(TmpE);
         Ret = pairWithEmptyBkey(getInvalidCastPVCons(ECE));
         constrainConsVarGeq(Vars, Ret.first, CS, Rsn, Safe_to_Wild, false,

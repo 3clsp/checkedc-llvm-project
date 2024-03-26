@@ -58,18 +58,18 @@ public:
     IsSrcVoidPtr = isVoidPointerType(SrcT);
     IsDstVoidPtr = isVoidPointerType(DstT);
 
-    if (!CB.isCastofGeneric(C) && !isCastSafe(DstT, SrcT)
+    if (!CB.isCastofGeneric(C) && !isCastSafe(DstT, SrcT, *Context)
       && !Info.hasPersistentConstraints(C, Context)) {
       // If ignore-unsafe-casts is present, and the src type is not
       // void* and dst type is not void* and isCastSafe is false,
       // then we can ignore the cast.
       if (_3COpts.IgnoreUnsafeCasts && !IsSrcVoidPtr &&
-          !IsDstVoidPtr && !isCastSafe(DstT, SrcT)) {
+          !IsDstVoidPtr && !isCastSafe(DstT, SrcT, *Context)) {
         return true;
       }
 
       // Check from a list of known casts.
-      if (!isCastSafe(DstT, SrcT)) {
+      if (!isCastSafe(DstT, SrcT, *Context)) {
         // This function internally checks if the option is enabled.
         if (isUnsafeCastInAllowedList(SrcT, DstT))
           return true;

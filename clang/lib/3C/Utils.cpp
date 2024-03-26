@@ -428,10 +428,37 @@ static bool setRecordComparisonResult(clang::QualType DstType,
   return true;
 }
 
-static bool castCheck(clang::QualType DstType, clang::QualType SrcType);
-static bool castCheckRecord(clang::QualType DstType,
-                            clang::QualType SrcType) {
+static bool castCheck(clang::QualType DstType, clang::QualType SrcType,
+                      clang::ASTContext &C);
 
+static bool recordHasPointerFields(RecordDecl *RD) {
+  for (const FieldDecl *FD : RD->fields()) {
+    if (FD->getType()->isPointerType())
+      return true;
+  }
+  return false;
+}
+
+static std::vector<int> getPointerOffsets(RecordDecl *RD) {
+  std::vector<int> Offsets;
+  for (const FieldDecl *FD : RD->fields()) {
+    if (FD->getType()->isPointerType())
+      Offsets.push_back(FD->getFieldIndex());
+  }
+  return Offsets;
+}
+
+static FieldDecl *getFieldAtOffset(RecordDecl *RD, unsigned int Offset) {
+  for (const FieldDecl *FD : RD->fields()) {
+    if (FD->getFieldIndex() == Offset)
+      return const_cast<FieldDecl *>(FD);
+  }
+  return nullptr;
+}
+
+static bool castCheckRecord(clang::QualType DstType,
+                            clang::QualType SrcType,
+                            clang::ASTContext &C) {
   // This should speed up the process of comparison.
   // It should also prevent infinite recursion.
   if (isRecordComparisonVisited(DstType, SrcType)) {
@@ -441,24 +468,63 @@ static bool castCheckRecord(clang::QualType DstType,
   RecordDecl *DstRecord = DstType->getAs<RecordType>()->getDecl();
   RecordDecl *SrcRecord = SrcType->getAs<RecordType>()->getDecl();
 
-  auto F1 = DstRecord->field_begin();
-  auto F2 = SrcRecord->field_begin();
-  auto E1 = DstRecord->field_end();
-  auto E2 = SrcRecord->field_end();
-
-  for (; F1 != E1 && F2 != E2; F1++, F2++) {
-    if (!castCheck((*F1)->getType(), (*F2)->getType()))
+  // Case 1:
+  // Source has a pointer field, but destination does not.
+  // In this case, we can simply check for size compatibility.
+  if (recordHasPointerFields(SrcRecord) &&
+      !recordHasPointerFields(DstRecord)) {
+    return C.getTypeSize(DstType) <= C.getTypeSize(SrcType);
+  } else if (!recordHasPointerFields(SrcRecord) &&
+             recordHasPointerFields(DstRecord)) {
+    // Case 2:
+    // Destination has a pointer field, but source does not.
+    // In this case, the cast is unsafe.
+    return false;
+  } else if (recordHasPointerFields(SrcRecord) &&
+             recordHasPointerFields(DstRecord)) {
+    // Case 3:
+    // Both source and destination have pointer fields.
+    // First we check total size compatibility.
+    if (C.getTypeSize(DstType) > C.getTypeSize(SrcType))
       return false;
-  }
+    
+    // Next we check if Destination has more pointer fields than source.
+    // If it does, then the cast is unsafe.
+    std::vector<int> DstOffsets = getPointerOffsets(DstRecord);
+    std::vector<int> SrcOffsets = getPointerOffsets(SrcRecord);
 
-  // It is fine if Src have more fields than Dst.
-  if (F1 == E1)
+    if (DstOffsets.size() > SrcOffsets.size())
+      return false;
+
+    // Now we check if the poitners are at the same offset within the record.
+    // If they are not, then the cast is unsafe.
+    std::vector<int> SplitSrcOffsets(SrcOffsets.begin(),
+                                     SrcOffsets.begin() + DstOffsets.size());
+    if (DstOffsets != SplitSrcOffsets)
+      return false;
+
+    // Now we check if each pointer fields are compatible.
+    for (unsigned I = 0; I < DstOffsets.size(); I++) {
+      FieldDecl *DstField = getFieldAtOffset(DstRecord, DstOffsets[I]);
+      FieldDecl *SrcField = getFieldAtOffset(SrcRecord, SplitSrcOffsets[I]);
+      if (!DstField || !SrcField)
+        return false;
+      
+      if (!castCheck(DstField->getType(), SrcField->getType(), C))
+        return false;
+    }
     return true;
-
+  } else {
+    // Case 4:
+    // Both source and destination do not have pointer fields.
+    // In this case, we can simply check for size compatibility.
+    return C.getTypeSize(DstType) <= C.getTypeSize(SrcType);
+  }
   return false;
 }
 
-static bool castCheck(clang::QualType DstType, clang::QualType SrcType) {
+static bool castCheck(clang::QualType DstType, clang::QualType SrcType,
+                      clang::ASTContext &C) {
 
   // Check if both types are same.
   if (SrcType == DstType)
@@ -475,7 +541,7 @@ static bool castCheck(clang::QualType DstType, clang::QualType SrcType) {
   // Both are pointers? check their pointee
   if (SrcPtrTypePtr && DstPtrTypePtr) {
     return castCheck(DstPtrTypePtr->getPointeeType(),
-                SrcPtrTypePtr->getPointeeType());
+                SrcPtrTypePtr->getPointeeType(), C);
   }
 
   if (SrcPtrTypePtr || DstPtrTypePtr)
@@ -490,17 +556,17 @@ static bool castCheck(clang::QualType DstType, clang::QualType SrcType) {
 
     for (unsigned I = 0; I < SrcFnType->getNumParams(); I++)
       if (!castCheck(SrcFnType->getParamType(I),
-                     DstFnType->getParamType(I)))
+                     DstFnType->getParamType(I), C))
         return false;
 
-    return castCheck(SrcFnType->getReturnType(), DstFnType->getReturnType());
+    return castCheck(SrcFnType->getReturnType(), DstFnType->getReturnType(), C);
   }
 
   if (_3COpts.ConsiderCompatibleCasts) {
     // Check if both are enums or records.
     if ((SrcTypePtr->isUnionType() && DstTypePtr->isUnionType()) ||
-        (SrcTypePtr->isRecordType() && DstTypePtr->isRecordType())) {
-      bool Result = castCheckRecord(DstType, SrcType);
+        (SrcTypePtr->isStructureType() && DstTypePtr->isStructureType())) {
+      bool Result = castCheckRecord(DstType, SrcType, C);
       setRecordComparisonResult(DstType, SrcType, Result);
       return Result;
     }
@@ -513,6 +579,10 @@ static bool castCheck(clang::QualType DstType, clang::QualType SrcType) {
   // If both are not scalar types? Then the types must be exactly same.
   if (!(SrcTypePtr->isScalarType() && DstTypePtr->isScalarType()))
     return SrcTypePtr == DstTypePtr;
+  
+  // For any other types, check if the sizes are compatible.
+  if (C.getTypeSize(SrcType) >= C.getTypeSize(DstType))
+    return true;
 
   // Check if both types are compatible.
   bool BothNotChar = SrcTypePtr->isCharType() ^ DstTypePtr->isCharType();
@@ -525,13 +595,14 @@ static bool castCheck(clang::QualType DstType, clang::QualType SrcType) {
   return !(BothNotChar || BothNotInt || BothNotFloat);
 }
 
-bool isCastSafe(clang::QualType DstType, clang::QualType SrcType) {
+bool isCastSafe(clang::QualType DstType, clang::QualType SrcType,
+                clang::ASTContext &C) {
   const clang::Type *DstTypePtr = DstType.getTypePtr();
   const clang::PointerType *DstPtrTypePtr =
       dyn_cast<clang::PointerType>(DstTypePtr);
   if (!DstPtrTypePtr) // Safe to cast to a non-pointer.
     return true;
-  return castCheck(DstType, SrcType);
+  return castCheck(DstType, SrcType, C);
 }
 
 bool canWrite(const std::string &FilePath) {
