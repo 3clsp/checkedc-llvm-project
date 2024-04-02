@@ -46,9 +46,11 @@ public:
   ConstraintsInfo() {}
   void clear();
   CVars &getRCVars(ConstraintKey);
+  std::map<ConstraintKey, CVars> &getRCMap();
   CVars &getSrcCVars(ConstraintKey);
   CVars getWildAffectedCKeys(const std::set<ConstraintKey> &DWKeys);
   void printStats(llvm::raw_ostream &O);
+  void printRCMap(llvm::raw_ostream &O, Constraints &CS);
   void printRootCauseStats(raw_ostream &O, Constraints &CS);
   int getNumPtrsAffected(ConstraintKey CK);
 

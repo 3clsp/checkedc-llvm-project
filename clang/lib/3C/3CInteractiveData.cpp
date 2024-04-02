@@ -25,6 +25,8 @@ void ConstraintsInfo::clear() {
 
 CVars &ConstraintsInfo::getRCVars(ConstraintKey Ckey) { return RCMap[Ckey]; }
 
+std::map<ConstraintKey, CVars> &ConstraintsInfo::getRCMap() { return RCMap; }
+
 CVars &ConstraintsInfo::getSrcCVars(ConstraintKey Ckey) {
   return SrcWMap[Ckey];
 }
@@ -91,6 +93,27 @@ void ConstraintsInfo::printStats(llvm::raw_ostream &O) {
   O << "]";
   O << "}";
   O << "}}";
+}
+
+void ConstraintsInfo::printRCMap(llvm::raw_ostream &O,
+                Constraints &CS) {
+  O << "{\"RCMap\":[";
+  bool AddComma = false;
+  for (auto &T : getRCMap()) {
+    if (AddComma)
+      O << ",\n";
+    O << "{\"Key\":" << T.first << ", ";
+    O << "\"Name\":\"" << CS.getVar(T.first)->getStr() << "\", ";
+    PersistentSourceLoc PSL = AtomSourceMap[T.first];
+    if (PSL.valid())
+      O << "\"Location\":" << llvm::json::Value(PSL.toString()) << ", ";
+    else
+      O << "\"Location\":null, ";
+    O << "\"Reasons\":" << T.second.size();
+    O << "}";
+    AddComma = true;
+  }
+  O << "]}";
 }
 
 void ConstraintsInfo::printRootCauseStats(llvm::raw_ostream &O,

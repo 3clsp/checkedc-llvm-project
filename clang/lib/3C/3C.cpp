@@ -737,6 +737,13 @@ bool _3CInterface::dumpStats() {
           PerWildPtrInfo, GlobalProgramInfo->getConstraints());
       PerWildPtrInfo.close();
     }
+
+    llvm::raw_fd_ostream RCMap("RCMap.json", Ec);
+    if (!RCMap.has_error()) {
+      GlobalProgramInfo->getInterimConstraintState().printRCMap(
+          RCMap, GlobalProgramInfo->getConstraints());
+      RCMap.close();
+    }
   }
   return isSuccessfulSoFar();
 }
