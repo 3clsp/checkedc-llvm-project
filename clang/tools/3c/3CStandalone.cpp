@@ -244,6 +244,11 @@ static cl::opt<std::string> OptKnownSafeCasts(
               "multiple times."),
     cl::init(""), cl::cat(_3CCategory));
 
+static cl::opt<bool> OptAllowMultiGenericParams(
+    "allow-multi-generic-params",
+    cl::desc("Allow multiple generic parameters in a function."),
+    cl::init(false), cl::cat(_3CCategory));
+
 static cl::opt<bool> OptItypesForExtern(
     "itypes-for-extern",
     cl::desc("All functions with external linkage will be rewritten to use "
@@ -382,6 +387,7 @@ int main(int argc, const char **argv) {
   CcOptions.IgnoreUnsafeCasts = OptIgnoreUnsafeCasts;
   CcOptions.KnownSafeCasts = OptKnownSafeCasts;
   CcOptions.ConsiderCompatibleCasts = OptConsiderCompatibleCasts;
+  CcOptions.AllowMultiGenericParams = OptAllowMultiGenericParams;
   CcOptions.AllowUnwritableChanges = OptAllowUnwritableChanges;
   CcOptions.AllowRewriteFailures = OptAllowRewriteFailures;
   CcOptions.ItypesForExtern = OptItypesForExtern;

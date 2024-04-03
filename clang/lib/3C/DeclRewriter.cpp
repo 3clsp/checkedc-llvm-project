@@ -842,9 +842,9 @@ bool FunctionDeclBuilder::VisitFunctionDecl(FunctionDecl *FD) {
     else
       NewSig += "_For_any(T";
     for (int i = 0; i < FDConstraint->getGenericParams() - 1; i++) {
-      assert(i < 2 &&
+      assert(i < 4 &&
              "Need an unexpected number of type variables");
-      NewSig += std::begin({",U",",V"})[i];
+      NewSig += std::begin({",U",",V",",W",",X"})[i];
     }
     NewSig += ") ";
   }

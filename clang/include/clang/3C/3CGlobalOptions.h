@@ -53,6 +53,7 @@ struct _3COptions {
   bool DebugArrSolver;
   bool IgnoreUnsafeCasts;
   bool ConsiderCompatibleCasts;
+  bool AllowMultiGenericParams;
   std::string KnownSafeCasts;
 #ifdef FIVE_C
   bool RemoveItypes;

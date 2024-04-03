@@ -787,9 +787,9 @@ PointerVariableConstraint::mkString(Constraints &CS,
   std::string BaseTypeName = BaseType;
   if (InferredGenericIndex > -1 && isVoidPtr() &&
       isSolutionChecked(CS.getVariables())) {
-    assert(InferredGenericIndex < 3
+    assert(InferredGenericIndex < 5
            && "Trying to use an unexpected type variable name");
-    BaseTypeName = std::begin({"T","U","V"})[InferredGenericIndex];
+    BaseTypeName = std::begin({"T","U","V","W","X"})[InferredGenericIndex];
   }
 
   auto It = Vars.begin();
@@ -1108,15 +1108,19 @@ FunctionVariableConstraint::FunctionVariableConstraint(
   // function pointers, and source generics for now
   // Also exclude params that are checked or have itypes
   bool ConvertFunc = canWrite(FileName) && hasBody() && !IsFunctionPtr &&
-                        TypeParams == 0 && Voids.size() == 1;
+                        TypeParams == 0;
+  if (!_3COpts.AllowMultiGenericParams)
+    ConvertFunc = ConvertFunc && (Voids.size() == 1);
   bool DidConvert = false;
+  int Index = 0;
   auto &CS = I.getConstraints();
   for(int idx : Voids) {
     FVComponentVariable *FVCV = idx == -1 ? &ReturnVar : &ParamVars[idx];
     auto Ext = FVCV->ExternalConstraint;
     if (ConvertFunc && !Ext->isOriginallyChecked() && !Ext->srcHasItype() &&
         Ext->getCvars().size() == 1) {
-      FVCV->setGenericIndex(0);
+      FVCV->setGenericIndex(Index);
+      Index++;
       DidConvert = true;
     } else {
       if (!Ext->isOriginallyChecked()) {
@@ -1124,7 +1128,7 @@ FunctionVariableConstraint::FunctionVariableConstraint(
       }
     }
   }
-  if (DidConvert) TypeParams = 1;
+  if (DidConvert) TypeParams = Index;
 }
 
 void FunctionVariableConstraint::constrainToWild(
