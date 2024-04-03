@@ -50,11 +50,25 @@ public:
     // Is cast compatible with LHS type?
     QualType SrcT = C->getSubExpr()->getType();
     QualType DstT = C->getType();
+    QualType RType = C->getType();
 
     // Only used for keeping track of all casts. So no need for 
     // below checks?
     auto TempCVs = CB.getExprConstraintVarsSet(C->getSubExpr());
-    Info.addCastInformation(TempCVs, DstT.getAsString());
+    // If DstT is a pointer, check if the pointee type is TypeDefType.
+    if (DstT->isPointerType()) {
+      QualType PointeeType = DstT->getPointeeType();
+      if (const TypedefType *TT = PointeeType->getAs<TypedefType>()) {
+        // Make it into a pointer type of the underlying type.
+        RType = Context->getPointerType(TT->desugar());
+      }
+    } else {
+      // DstT is not a pointer. But still check if it is a typedef type.
+      if (const TypedefType *TT = DstT->getAs<TypedefType>()) {
+        RType = TT->desugar();
+      }
+    }
+    Info.addCastInformation(TempCVs, RType.getAsString());
 
     if (!CB.isCastofGeneric(C) && !isCastSafe(DstT, SrcT)
       && !Info.hasPersistentConstraints(C, Context)) {
