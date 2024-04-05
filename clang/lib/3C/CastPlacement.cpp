@@ -228,6 +228,15 @@ void CastPlacementVisitor::surroundByCast(ConstraintVariable *Dst,
   }
 
   auto CastStrs = getCastString(Dst, TypeVar, CastKind);
+  // Is this check enough? Return suffix will be either ")" or ", bounds(unknown))"
+  if (CastStrs.second == ", bounds(unknown))") {
+    reportCustomDiagnostic(
+        Writer.getSourceMgr().getDiagnostics(),
+        DiagnosticsEngine::Warning,
+        "Inserting _Assume_bounds_cast with unknown bounds. "
+        "Manual verification recommended.",
+        E->getBeginLoc());
+  }
 
   // If E is already a cast expression, we will try to rewrite the cast instead
   // of adding a new expression.

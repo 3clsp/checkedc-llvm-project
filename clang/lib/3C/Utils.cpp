@@ -468,6 +468,11 @@ static bool castCheckRecord(clang::QualType DstType,
   RecordDecl *DstRecord = DstType->getAs<RecordType>()->getDecl();
   RecordDecl *SrcRecord = SrcType->getAs<RecordType>()->getDecl();
 
+  DstRecord = DstRecord->getDefinition();
+  SrcRecord = SrcRecord->getDefinition();
+  if (!DstRecord || !SrcRecord)
+    return false;
+  
   // Case 1:
   // Source has a pointer field, but destination does not.
   // In this case, we can simply check for size compatibility.
