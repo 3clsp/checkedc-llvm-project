@@ -585,9 +585,11 @@ static bool castCheck(clang::QualType DstType, clang::QualType SrcType,
   if (!(SrcTypePtr->isScalarType() && DstTypePtr->isScalarType()))
     return SrcTypePtr == DstTypePtr;
   
-  // For any other types, check if the sizes are compatible.
-  if (C.getTypeSize(SrcType) >= C.getTypeSize(DstType))
-    return true;
+  if (_3COpts.ConsiderCompatibleCasts) {
+    // For any other types, check if the sizes are compatible.
+    if (C.getTypeSize(SrcType) >= C.getTypeSize(DstType))
+      return true;
+  }
 
   // Check if both types are compatible.
   bool BothNotChar = SrcTypePtr->isCharType() ^ DstTypePtr->isCharType();

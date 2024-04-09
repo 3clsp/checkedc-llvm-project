@@ -170,7 +170,8 @@ public:
                        PointerVariableConstraint *PV);
 
   void unifyIfTypedef(const QualType &QT, clang::ASTContext &,
-                      PVConstraint *, ConsAction CA = Same_to_Same);
+                      PVConstraint *, ConsAction CA = Same_to_Same,
+                      bool IsFunctionRetOrParam = false);
 
   CVarOption lookupTypedef(PersistentSourceLoc PSL);
 

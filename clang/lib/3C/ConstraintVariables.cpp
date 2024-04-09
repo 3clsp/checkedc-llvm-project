@@ -752,7 +752,8 @@ PointerVariableConstraint::mkString(Constraints &CS,
       EmitName = false;
   }
 
-  if (IsTypedef && !UnmaskTypedef) {
+  if (IsTypedef && !UnmaskTypedef &&
+      !(_3COpts.AllowMultiGenericParams && isVoidPtr())) {
     std::string QualTypedef = gatherQualStrings() + TypedefString;
     if (!ForItype)
       QualTypedef += " ";
@@ -1107,10 +1108,10 @@ FunctionVariableConstraint::FunctionVariableConstraint(
   // Exclude unwritables, external functions,
   // function pointers, and source generics for now
   // Also exclude params that are checked or have itypes
-  bool ConvertFunc = canWrite(FileName) && hasBody() && !IsFunctionPtr &&
+  bool ConvertFunc = canWrite(FileName) && !IsFunctionPtr &&
                         TypeParams == 0;
   if (!_3COpts.AllowMultiGenericParams)
-    ConvertFunc = ConvertFunc && (Voids.size() == 1);
+    ConvertFunc = ConvertFunc && (Voids.size() == 1) && hasBody();
   bool DidConvert = false;
   int Index = 0;
   auto &CS = I.getConstraints();
@@ -2205,13 +2206,15 @@ FVComponentVariable::FVComponentVariable(const QualType &QT,
   ExternalConstraint =
       new PVConstraint(QT, D, N, I, C, InFunc, -1, PotentialGeneric, HasItype,
                        nullptr, ITypeT);
-  if (!HasItype && QT->isVoidPointerType()) {
+  if (!HasItype && QT->isVoidPointerType() && !_3COpts.AllowMultiGenericParams) {
     InternalConstraint = ExternalConstraint;
   } else {
     InternalConstraint =
         new PVConstraint(QT, D, N, I, C, InFunc, -1, PotentialGeneric, HasItype,
                          nullptr, ITypeT);
     bool EquateChecked = QT->isVoidPointerType();
+    if (_3COpts.AllowMultiGenericParams && EquateChecked)
+      EquateChecked = false;
     linkInternalExternal(I, EquateChecked);
   }
 

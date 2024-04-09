@@ -641,8 +641,8 @@ void ProgramInfo::addVariable(clang::DeclaratorDecl *D,
     NewCV = F;
 
     auto RetTy = FD->getReturnType();
-    unifyIfTypedef(RetTy, *AstContext, F->getExternalReturn(), Wild_to_Safe);
-    unifyIfTypedef(RetTy, *AstContext, F->getInternalReturn(), Safe_to_Wild);
+    unifyIfTypedef(RetTy, *AstContext, F->getExternalReturn(), Wild_to_Safe, true);
+    unifyIfTypedef(RetTy, *AstContext, F->getInternalReturn(), Safe_to_Wild, true);
     auto PSL = PersistentSourceLoc::mkPSL(FD,*AstContext);
     ensureNtCorrect(RetTy, PSL, F->getExternalReturn());
     ensureNtCorrect(RetTy, PSL, F->getInternalReturn());
@@ -655,8 +655,8 @@ void ProgramInfo::addVariable(clang::DeclaratorDecl *D,
       QualType ParamTy = PVD->getType();
       PVConstraint *PVInternal = F->getInternalParam(I);
       PVConstraint *PVExternal = F->getExternalParam(I);
-      unifyIfTypedef(ParamTy, *AstContext, PVExternal, Wild_to_Safe);
-      unifyIfTypedef(ParamTy, *AstContext, PVInternal, Safe_to_Wild);
+      unifyIfTypedef(ParamTy, *AstContext, PVExternal, Wild_to_Safe, true);
+      unifyIfTypedef(ParamTy, *AstContext, PVInternal, Safe_to_Wild, true);
       ensureNtCorrect(ParamTy, ParamPSL, PVInternal);
       ensureNtCorrect(ParamTy, ParamPSL, PVExternal);
       PVInternal->setValidDecl();
@@ -741,7 +741,8 @@ void ProgramInfo::ensureNtCorrect(const QualType &QT,
 }
 
 void ProgramInfo::unifyIfTypedef(const QualType &QT, ASTContext &Context,
-                                 PVConstraint *P, ConsAction CA) {
+                                 PVConstraint *P, ConsAction CA,
+                                 bool IsFunctionRetOrParam) {
   if (const auto *TDT = dyn_cast<TypedefType>(QT.getTypePtr())) {
     auto *TDecl = TDT->getDecl();
     auto PSL = PersistentSourceLoc::mkPSL(TDecl, Context);
@@ -750,6 +751,12 @@ void ProgramInfo::unifyIfTypedef(const QualType &QT, ASTContext &Context,
     if (O.hasValue()) {
       auto *Bounds = &O.getValue();
       P->setTypedef(Bounds, TDecl->getNameAsString());
+      if (auto *PV = dyn_cast<PVConstraint>(Bounds)) {
+        if (PV->isVoidPtr() && IsFunctionRetOrParam &&
+            _3COpts.AllowMultiGenericParams) {
+            return;
+          }
+      }
       constrainConsVarGeq(P, Bounds, CS, Rsn, CA, false, this);
     }
   }
