@@ -601,36 +601,10 @@ void DeclRewriter::doDeclRewrite(SourceRange &SR, DeclReplacement *N) {
 void DeclRewriter::rewriteFunctionDecl(FunctionDeclReplacement *N) {
   rewriteSourceRange(R, N->getSourceRange(A.getSourceManager()),
                      N->getReplacement());
-  if (N->getDecl()->isThisDeclarationADefinition()) {
+  if (N->getDecl()->doesThisDeclarationHaveABody()) {
     Stmt *S = N->getDecl()->getBody();
-    /// Case where this assertion fails.
-    /* static __attribute__ ((__used__))
-      void *
-      __memcpy (
-        void          *dest,
-        const void    *src,
-        unsigned int  count
-        )
-      {
-        return CopyMem (dest, src, (UINTN)count);
-      }
-
-      __attribute__ ((__alias__ ("__memcpy")))
-      void *
-      memcpy (
-        void          *dest,
-        const void    *src,
-        unsigned int  count
-      );
-
-    In this case, 3c generates changes for memcpy and clang
-    returns true for isThisDeclarationADefinition even though
-    there is no definition.
-    */
-    if (S == nullptr)
-      return;
-    // assert("Supplementary declarations should only exist on rewritings for "
-    //        "function definitions." && S != nullptr);
+    assert("Supplementary declarations should only exist on rewritings for "
+           "function definitions." && S != nullptr);
     // Insert supplementary declarations after the opening curly brace of the
     // function body.
     emitSupplementaryDeclarations(N->getSupplementaryDecls(),
