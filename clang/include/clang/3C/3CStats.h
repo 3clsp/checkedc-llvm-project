@@ -135,4 +135,32 @@ class CastInfoAggregator : public RootCauseAggregator<std::vector<CastInfoMapTyp
     void addCastInfo(std::string &Dst, std::string &Src, PersistentSourceLoc &Loc);
 };
 
+struct VoidInfoMapType {
+  PersistentSourceLoc Loc;
+  enum VType {
+    T_LOCAL,
+    T_PARAM,
+    T_RETURN,
+    T_MEMBER,
+    T_GLOBAL,
+    T_TYPEDEF,
+    T_UNKNOWN
+  };
+  VType Type;
+  std::string Name;
+  bool Generic;
+};
+
+// Aggregator for void information.
+class VoidInfoAggregator : public RootCauseAggregator<std::vector<VoidInfoMapType>> {
+  public:
+    void dumpStats(std::string FilePath) override;
+    void addVoidInfo(PersistentSourceLoc &Loc, std::string &Name);
+    void updateType(PersistentSourceLoc &Loc,
+                    VoidInfoMapType::VType Type,
+                    const std::string &Name="");
+    void updateGeneric(PersistentSourceLoc &Loc, bool Generic);
+    std::string getTypeString(VoidInfoMapType::VType Type);
+};
+
 #endif // LLVM_CLANG_3C_3CSTATS_H

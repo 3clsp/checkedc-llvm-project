@@ -513,6 +513,10 @@ PointerVariableConstraint::PointerVariableConstraint(
   // varargs are always wild, as are void pointers that are not generic
   bool IsWild = isVarArgType(BaseType) ||
       (!(PotentialGeneric || isGeneric()) && IsVoidPtr);
+  // Mark the PSL if this is a void pointer.
+  if (IsVoidPtr)
+    I.getVIA().addVoidInfo(PSL, N);
+
   if (IsWild) {
     std::string Rsn =
         IsVoidPtr ? VOID_TYPE_REASON : "Default Var arg list type";
@@ -734,7 +738,8 @@ std::string PointerVariableConstraint::gatherQualStrings(void) const {
 
 std::string
 PointerVariableConstraint::mkString(Constraints &CS,
-                                    const MkStringOpts &Opts) const {
+                                    const MkStringOpts &Opts,
+                                    bool *IsGeneric) const {
   UNPACK_OPTS(EmitName, ForItype, EmitPointee, UnmaskTypedef, UseName,
               ForItypeBase);
 
@@ -788,6 +793,7 @@ PointerVariableConstraint::mkString(Constraints &CS,
   std::string BaseTypeName = BaseType;
   if (InferredGenericIndex > -1 && isVoidPtr() &&
       isSolutionChecked(CS.getVariables())) {
+    *IsGeneric = true;
     assert(InferredGenericIndex < 5
            && "Trying to use an unexpected type variable name");
     BaseTypeName = std::begin({"T","U","V","W","X"})[InferredGenericIndex];
@@ -1615,7 +1621,8 @@ bool FunctionVariableConstraint::solutionEqualTo(Constraints &CS,
 
 std::string
 FunctionVariableConstraint::mkString(Constraints &CS,
-                                     const MkStringOpts &Opts) const {
+                                     const MkStringOpts &Opts,
+                                     bool *IsGeneric) const {
   UNPACK_OPTS(EmitName, ForItype, EmitPointee, UnmaskTypedef, UseName,
               ForItypeBase);
   if (UseName.empty())

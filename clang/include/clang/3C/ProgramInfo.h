@@ -182,6 +182,8 @@ public:
 
   CastInfoAggregator &getCIA() { return CIA; }
 
+  VoidInfoAggregator &getVIA() { return VIA; }
+
   // Store mapping from ASTContexts to a unique index in the ASTs vector in
   // the ProgramInfo object. This function must be called prior to any AST
   // traversals so that the map is populated.
@@ -263,6 +265,9 @@ private:
 
   // This class collects all invalid cast information that can  later be dumped.
   CastInfoAggregator CIA;
+
+  // This class collects all void pointer information that can later be dumped.
+  VoidInfoAggregator VIA;
 
   // Inserts the given FVConstraint set into the extern or static function map.
   // Returns the merged version if it was a redeclaration, or the constraint

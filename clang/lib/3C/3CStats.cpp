@@ -285,3 +285,103 @@ void CastInfoAggregator::addCastInfo(std::string &Dst, std::string &Src,
   M.push_back(C);
   return;
 }
+
+void VoidInfoAggregator::dumpStats(std::string FilePath) {
+  std::error_code EC;
+  llvm::raw_fd_ostream Output(FilePath, EC, llvm::sys::fs::F_Text);
+
+  if (!EC) {
+    Output << "[";
+    bool FirstOuter = true;
+    for (auto &It : getData()) {
+
+      if (!FirstOuter)
+        Output << ",";
+      else
+        FirstOuter = false;
+
+      Output << "{\"file\":\"" << It.Loc.getFileName() << "\",";
+      Output << "\"line\":" << It.Loc.getLineNo() << ",";
+      Output << "\"colstart\":" << It.Loc.getColSNo() << ",";
+      Output << "\"colend\":" << It.Loc.getColENo() << ",";
+      Output << "\"type\":\"" << getTypeString(It.Type) << "\",";
+      Output << "\"name\":\"" << It.Name << "\",";
+      Output << "\"generic\":" << It.Generic << "}";
+    }
+    Output << "]";
+  }
+}
+
+void VoidInfoAggregator::addVoidInfo(PersistentSourceLoc &Loc, std::string &Name) {
+  std::vector<VoidInfoMapType> &M = getData();
+  for (auto &It : M) {
+    if (It.Loc == Loc)
+      return;
+  }
+  VoidInfoMapType V;
+  V.Loc = Loc;
+  V.Type = VoidInfoMapType::T_UNKNOWN;
+  V.Name = Name;
+  V.Generic = false;
+  M.push_back(V);
+}
+
+void VoidInfoAggregator::updateType(PersistentSourceLoc &Loc,
+                                   VoidInfoMapType::VType Type,
+                                   const std::string &Name) {
+  std::vector<VoidInfoMapType> &M = getData();
+  bool Found = false;
+  for (auto &It : M) {
+    if (It.Loc == Loc && It.Type == VoidInfoMapType::T_UNKNOWN && Loc.valid()) {
+      Found = true;
+      It.Type = Type;
+    }
+  }
+  // Special case for Typedefs where PSL is not valid.
+  // If Loc is Invalid and the Type is TYPEDEF, then we try to match the name.
+  if (Type == VoidInfoMapType::T_TYPEDEF) {
+    if (!Found) {
+      for (auto &It : M) {
+        if (!It.Loc.valid() && It.Name == Name && It.Type == VoidInfoMapType::T_UNKNOWN) {
+          It.Type = Type;
+          // If we currently have a location, then we update it.
+          if (Loc.valid())
+            It.Loc = Loc;
+          return;
+        }
+      }
+    }
+  }
+}
+
+// This function only gets used for function params and returns.
+// Currenly 3C doesn't write generics for members.
+void VoidInfoAggregator::updateGeneric(PersistentSourceLoc &Loc, bool Generic) {
+  std::vector<VoidInfoMapType> &M = getData();
+  for (auto &It : M) {
+    if (It.Loc == Loc) {
+      It.Generic = Generic;
+      return;
+    }
+  }
+}
+
+std::string VoidInfoAggregator::getTypeString(VoidInfoMapType::VType Type) {
+  switch (Type) {
+  case VoidInfoMapType::T_LOCAL:
+    return "Local";
+  case VoidInfoMapType::T_PARAM:
+    return "Param";
+  case VoidInfoMapType::T_RETURN:
+    return "Return";
+  case VoidInfoMapType::T_TYPEDEF:
+    return "Typedef";
+  case VoidInfoMapType::T_MEMBER:
+    return "Member";
+  case VoidInfoMapType::T_GLOBAL:
+    return "Global";
+  case VoidInfoMapType::T_UNKNOWN:
+    return "Unknown";
+  }
+  return "Unknown";
+}

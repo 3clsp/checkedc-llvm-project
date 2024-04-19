@@ -74,7 +74,7 @@ RewrittenDecl
 DeclRewriter::buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
                              std::string UseName, ProgramInfo &Info,
                              ArrayBoundsRewriter &ABR, bool GenerateSDecls,
-                             bool SDeclChecked) {
+                             bool SDeclChecked, ASTContext &Context) {
   std::string DeclName;
   bool NeedsFreshLowerBound =
       checkNeedsFreshLowerBound(Defn, UseName, Info, DeclName);
@@ -104,6 +104,7 @@ DeclRewriter::buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
   bool BaseTypeRenamed =
       Decl && Info.TheMultiDeclsInfo.wasBaseTypeRenamed(Decl);
 
+  bool IsGeneric = false;
   // It should in principle be possible to always generate the unchecked portion
   // of the itype by going through mkString. However, mkString has bugs that
   // lead to incorrect output in some less common cases
@@ -129,7 +130,7 @@ DeclRewriter::buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
     Type = Defn->mkString(Info.getConstraints(),
                           MKSTRING_OPTS(UnmaskTypedef = IsCheckedTypedef,
                                         ForItypeBase = true,
-                                        UseName = DeclName));
+                                        UseName = DeclName), &IsGeneric);
   } else {
     // In the remaining cases, the unchecked portion of the itype is just the
     // original type of the pointer. The first branch tries to generate the type
@@ -146,9 +147,12 @@ DeclRewriter::buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
   std::string IType = " : itype(" +
     Defn->mkString(Info.getConstraints(),
                    MKSTRING_OPTS(EmitName = false, ForItype = true,
-                                 UnmaskTypedef = IsUncheckedTypedef)) + ")";
+                                 UnmaskTypedef = IsUncheckedTypedef), &IsGeneric) + ")";
   IType += ABR.getBoundsString(Defn, Decl, true, NeedsFreshLowerBound);
 
+  PersistentSourceLoc PSL = PersistentSourceLoc::mkPSL(Decl, Context);
+  if (IsGeneric)
+    Info.getVIA().updateGeneric(PSL, true);
   std::string SDecl;
   if (GenerateSDecls && NeedsFreshLowerBound)
     SDecl =
@@ -159,18 +163,25 @@ DeclRewriter::buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
 RewrittenDecl
 DeclRewriter::buildCheckedDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
                                std::string UseName, ProgramInfo &Info,
-                               ArrayBoundsRewriter &ABR, bool GenerateSDecls) {
+                               ArrayBoundsRewriter &ABR, bool GenerateSDecls,
+                               ASTContext &Context) {
   std::string DeclName;
   bool NeedsFreshLowerBound =
       checkNeedsFreshLowerBound(Defn, UseName, Info, DeclName);
 
+  bool IsGeneric = false;
   std::string Type =
-    Defn->mkString(Info.getConstraints(), MKSTRING_OPTS(UseName = DeclName));
+    Defn->mkString(Info.getConstraints(), MKSTRING_OPTS(UseName = DeclName), &IsGeneric);
   std::string IType =
     ABR.getBoundsString(Defn, Decl, false, NeedsFreshLowerBound);
   std::string SDecl;
   if (GenerateSDecls && NeedsFreshLowerBound)
     SDecl = buildSupplementaryDecl(Defn, Decl, ABR, Info, true, DeclName);
+  
+  PersistentSourceLoc PSL = PersistentSourceLoc::mkPSL(Decl, Context);
+  if (IsGeneric)
+    Info.getVIA().updateGeneric(PSL, true);
+
   return RewrittenDecl(Type, IType, SDecl);
 }
 
@@ -884,7 +895,7 @@ FunctionDeclBuilder::buildCheckedDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
                                       std::string UseName, bool &RewriteParm,
                                       bool &RewriteRet, bool GenerateSDecls) {
   RewrittenDecl RD = DeclRewriter::buildCheckedDecl(Defn, Decl, UseName, Info,
-                                                    ABRewriter, GenerateSDecls);
+                                                    ABRewriter, GenerateSDecls, *Context);
   RewriteParm |= getExistingIType(Defn).empty() != RD.IType.empty() ||
                  isa_and_nonnull<ParmVarDecl>(Decl);
   RewriteRet |= isa_and_nonnull<FunctionDecl>(Decl);
@@ -911,7 +922,7 @@ FunctionDeclBuilder::buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
     }
   }
   RewrittenDecl RD = DeclRewriter::buildItypeDecl(
-      Defn, Decl, UseName, Info, ABRewriter, GenerateSDecls, SDeclChecked);
+      Defn, Decl, UseName, Info, ABRewriter, GenerateSDecls, SDeclChecked, *Context);
   RewriteParm = true;
   RewriteRet |= isa_and_nonnull<FunctionDecl>(Decl);
   return RD;

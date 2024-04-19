@@ -709,6 +709,7 @@ bool _3CInterface::dumpStats() {
 
   if (_3COpts.DumpStats) {
     GlobalProgramInfo->getCIA().dumpStats("Invalid_casts_aggregate.json");
+    GlobalProgramInfo->getVIA().dumpStats("Void_pointers_aggregate.json");
     GlobalProgramInfo->printStats(FilePaths, llvm::errs(), true);
     assert(CStateisclear == true);
     GlobalProgramInfo->computeInterimConstraintState(FilePaths);

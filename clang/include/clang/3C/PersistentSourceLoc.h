@@ -56,6 +56,11 @@ public:
       return FileName < O.FileName;
   }
 
+  bool operator==(const PersistentSourceLoc &O) const {
+    return FileName == O.FileName && LineNo == O.LineNo &&
+           ColNoS == O.ColNoS && ColNoE == O.ColNoE;
+  }
+
   std::string toString() const {
     return FileName + ":" + std::to_string(LineNo) + ":" +
            std::to_string(ColNoS) + ":" + std::to_string(ColNoE);

@@ -46,11 +46,11 @@ RewrittenDecl mkStringForPVDecl(MultiDeclMemberDecl *MMD, PVConstraint *PVC,
     // constraint generation is updated to handle structure/global itypes.
     RD = DeclRewriter::buildItypeDecl(PVC, cast<DeclaratorDecl>(MMD),
                                       PVC->getName(), Info, ABRewriter, true,
-                                      true);
+                                      true, MMD->getASTContext());
   } else {
     RD = DeclRewriter::buildCheckedDecl(PVC, cast<DeclaratorDecl>(MMD),
                                         PVC->getName(), Info, ABRewriter,
-                                        true);
+                                        true, MMD->getASTContext());
   }
   RD.Type = getStorageQualifierString(MMD) + RD.Type;
 

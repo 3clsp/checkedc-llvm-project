@@ -128,7 +128,8 @@ public:
   // This method is used in several contexts with special requirements, which
   // are addressed by the options in MkStringOpts; see the comments there.
   virtual std::string mkString(Constraints &CS,
-                               const MkStringOpts &Opts = {}) const = 0;
+                               const MkStringOpts &Opts = {},
+                               bool *IsGeneric=nullptr) const = 0;
 
   // Debug printing of the constraint variable.
   virtual void print(llvm::raw_ostream &O) const = 0;
@@ -524,7 +525,8 @@ public:
   std::string gatherQualStrings(void) const;
 
   std::string mkString(Constraints &CS,
-                       const MkStringOpts &Opts = {}) const override;
+                       const MkStringOpts &Opts = {},
+                       bool *IsGeneric=nullptr) const override;
 
   FunctionVariableConstraint *getFV() const { return FV; }
 
@@ -733,7 +735,8 @@ public:
                        bool ComparePtyp = true) const override;
 
   std::string mkString(Constraints &CS,
-                       const MkStringOpts &Opts = {}) const override;
+                       const MkStringOpts &Opts = {},
+                       bool *IsGeneric=nullptr) const override;
   void print(llvm::raw_ostream &O) const override;
   void dump() const override { print(llvm::errs()); }
   void dumpJson(llvm::raw_ostream &O) const override;

@@ -424,8 +424,8 @@ private:
 // visitor which is executed before both of the other visitors.
 class VariableAdderVisitor : public RecursiveASTVisitor<VariableAdderVisitor> {
 public:
-  explicit VariableAdderVisitor(ASTContext *Context, ProgramVariableAdder &VA)
-      : Context(Context), VarAdder(VA) {}
+  explicit VariableAdderVisitor(ASTContext *Context, ProgramVariableAdder &VA, ProgramInfo &I)
+      : Context(Context), VarAdder(VA), Info(I) {}
 
   // Defining this function lets the visitor traverse implicit function
   // declarations. Without this, we wouldn't see declarations for implicit
@@ -442,6 +442,8 @@ public:
     if (!VarAdder.seenTypedef(PSL))
       // Add this typedef to the program info.
       VarAdder.addTypedef(PSL, TD, *Context);
+    std::string Name = TD->getNameAsString();
+    Info.getVIA().updateType(PSL, VoidInfoMapType::T_TYPEDEF, Name);
     return true;
   }
 
@@ -451,6 +453,14 @@ public:
     // as it processes a function
     if (FL.isValid() && !isa<ParmVarDecl>(D))
       addVariable(D);
+    Linkage L = D->getLinkageAndVisibility().getLinkage();
+    PersistentSourceLoc PSL = PersistentSourceLoc::mkPSL(D, *Context);
+    if (L == ExternalLinkage)
+      Info.getVIA().updateType(PSL,
+                               VoidInfoMapType::T_GLOBAL);
+    else
+      Info.getVIA().updateType(PSL,
+                               VoidInfoMapType::T_LOCAL);
     return true;
   }
 
@@ -458,6 +468,21 @@ public:
     FullSourceLoc FL = Context->getFullLoc(D->getBeginLoc());
     if (FL.isValid())
       VarAdder.addVariable(D, Context);
+    PersistentSourceLoc PSL = PersistentSourceLoc::mkPSL(D, *Context);
+    const FunctionProtoType *FPT = D->getType()->getAs<FunctionProtoType>();
+    if (FPT != nullptr) {
+      for (unsigned i = 0; i < FPT->getNumParams(); i++) {
+        ParmVarDecl *PVD = D->getParamDecl(i);
+        PersistentSourceLoc PSL2 = PersistentSourceLoc::mkPSL(PVD, *Context);
+        Info.getVIA().updateType(PSL2,
+                                 VoidInfoMapType::T_PARAM);
+      }
+      Info.getVIA().updateType(PSL, VoidInfoMapType::T_RETURN);
+    } else {
+      const FunctionNoProtoType *FNPT = D->getType()->getAs<FunctionNoProtoType>();
+      if (FNPT != nullptr)
+        Info.getVIA().updateType(PSL, VoidInfoMapType::T_RETURN);
+    }
     return true;
   }
 
@@ -468,8 +493,11 @@ public:
              Definition);
       FullSourceLoc FL = Context->getFullLoc(Definition->getBeginLoc());
       if (FL.isValid())
-        for (auto *const D : Definition->fields())
+        for (auto *const D : Definition->fields()) {
           addVariable(D);
+          PersistentSourceLoc PSL = PersistentSourceLoc::mkPSL(D, *Context);
+          Info.getVIA().updateType(PSL, VoidInfoMapType::T_MEMBER);
+        }
     }
     return true;
   }
@@ -477,6 +505,7 @@ public:
 private:
   ASTContext *Context;
   ProgramVariableAdder &VarAdder;
+  ProgramInfo &Info;
 
   void addVariable(DeclaratorDecl *D) {
     VarAdder.addABoundsVariable(D);
@@ -497,7 +526,7 @@ void VariableAdderConsumer::HandleTranslationUnit(ASTContext &C) {
       errs() << "Analyzing\n";
   }
 
-  VariableAdderVisitor VAV = VariableAdderVisitor(&C, Info);
+  VariableAdderVisitor VAV = VariableAdderVisitor(&C, Info, Info);
   LowerBoundAssignmentFinder LBF = LowerBoundAssignmentFinder(&C, Info);
   TranslationUnitDecl *TUD = C.getTranslationUnitDecl();
   // Collect Variables.

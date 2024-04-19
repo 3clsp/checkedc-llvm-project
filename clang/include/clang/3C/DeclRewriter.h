@@ -39,12 +39,14 @@ public:
   static RewrittenDecl buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
                                       std::string UseName, ProgramInfo &Info,
                                       ArrayBoundsRewriter &ABR,
-                                      bool GenerateSDecls, bool SDeclChecked);
+                                      bool GenerateSDecls, bool SDeclChecked,
+                                      ASTContext &Context);
 
   static RewrittenDecl
   buildCheckedDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
                    std::string UseName, ProgramInfo &Info,
-                   ArrayBoundsRewriter &ABR, bool GenerateSDecls);
+                   ArrayBoundsRewriter &ABR, bool GenerateSDecls,
+                   ASTContext &Context);
 
 private:
   Rewriter &R;
