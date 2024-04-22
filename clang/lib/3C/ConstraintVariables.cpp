@@ -793,7 +793,8 @@ PointerVariableConstraint::mkString(Constraints &CS,
   std::string BaseTypeName = BaseType;
   if (InferredGenericIndex > -1 && isVoidPtr() &&
       isSolutionChecked(CS.getVariables())) {
-    *IsGeneric = true;
+    if (IsGeneric)
+      *IsGeneric = true;
     assert(InferredGenericIndex < 5
            && "Trying to use an unexpected type variable name");
     BaseTypeName = std::begin({"T","U","V","W","X"})[InferredGenericIndex];
