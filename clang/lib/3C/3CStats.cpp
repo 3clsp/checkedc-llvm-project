@@ -272,9 +272,6 @@ void CastInfoAggregator::addCastInfo(std::string &Dst, std::string &Src,
     if (It.Dst == Dst && It.Src == Src) {
       It.Locs.push_back(Loc);
       return;
-    } else if (It.Dst == Src && It.Src == Dst) {
-      It.Locs.push_back(Loc);
-      return;
     }
   }
   // Insert a new entry.

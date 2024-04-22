@@ -18,9 +18,10 @@ using namespace clang;
 ConstraintResolver::~ConstraintResolver() {}
 
 // Force all ConstraintVariables in this set to be WILD
-void ConstraintResolver::constraintAllCVarsToWild(const CVarSet &CSet,
+bool ConstraintResolver::constraintAllCVarsToWild(const CVarSet &CSet,
                                                   const std::string &Rsn,
                                                   Expr *AtExpr) {
+  bool Added = false;
   PersistentSourceLoc PSL;
   if (AtExpr != nullptr) {
     PSL = PersistentSourceLoc::mkPSL(AtExpr, *Context);
@@ -30,13 +31,15 @@ void ConstraintResolver::constraintAllCVarsToWild(const CVarSet &CSet,
 
   for (const auto &A : CSet) {
     if (auto *PVC = dyn_cast<PVConstraint>(A))
-      PVC->constrainToWild(CS, Reason);
+      Added = PVC->constrainToWild(CS, Reason);
     else {
       auto *FVC = dyn_cast<FVConstraint>(A);
       assert(FVC != nullptr);
-      FVC->constrainToWild(CS, Reason);
+      Added = FVC->constrainToWild(CS, Reason);
     }
   }
+
+  return Added;
 }
 
 void ConstraintResolver::constraintCVarToWild(CVarOption CVar,
@@ -134,6 +137,7 @@ static ConstAtom *analyzeAllocExpr(CallExpr *CE, Constraints &CS,
 }
 
 CVarSet ConstraintResolver::getInvalidCastPVCons(CastExpr *E) {
+  bool Added = false;
   QualType DstType = E->getType();
   QualType SrcType = E->getSubExpr()->getType();
 
@@ -162,10 +166,11 @@ CVarSet ConstraintResolver::getInvalidCastPVCons(CastExpr *E) {
 
   auto *P = new PVConstraint(E, Info, *Context);
   PersistentSourceLoc PL = PersistentSourceLoc::mkPSL(E, *Context);
-  Info.getCIA().addCastInfo(DstStr, SrcStr, PL);
   std::string Rsn =
       "Cast from " + SrcType.getAsString() + " to " + DstType.getAsString();
-  P->constrainToWild(Info.getConstraints(), ReasonLoc(Rsn, PL));
+  Added = P->constrainToWild(Info.getConstraints(), ReasonLoc(Rsn, PL));
+  if (Added)
+    Info.getCIA().addCastInfo(DstStr, SrcStr, PL);
   return {P};
 }
 

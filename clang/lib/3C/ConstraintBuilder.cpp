@@ -47,6 +47,7 @@ public:
 
   // (T)e
   bool VisitCStyleCastExpr(CStyleCastExpr *C) {
+    bool Added = false;
     // Is cast compatible with LHS type?
     QualType SrcT = C->getSubExpr()->getType();
     QualType DstT = C->getType();
@@ -76,12 +77,13 @@ public:
       }
 
       PersistentSourceLoc PSL = PersistentSourceLoc::mkPSL(C, *Context);
-      Info.getCIA().addCastInfo(DstStr, SrcStr, PSL);
 
       auto CVs = CB.getExprConstraintVarsSet(C->getSubExpr());
       std::string Rsn =
           "Cast from " + SrcT.getAsString() + " to " + DstT.getAsString();
-      CB.constraintAllCVarsToWild(CVs, Rsn, C);
+      Added = CB.constraintAllCVarsToWild(CVs, Rsn, C);
+      if (Added)
+        Info.getCIA().addCastInfo(DstStr, SrcStr, PSL);
     }
     return true;
   }

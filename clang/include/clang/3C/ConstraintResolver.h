@@ -25,7 +25,7 @@ public:
 
   virtual ~ConstraintResolver();
 
-  void constraintAllCVarsToWild(const CVarSet &CSet, const std::string &Rsn,
+  bool constraintAllCVarsToWild(const CVarSet &CSet, const std::string &Rsn,
                                 Expr *AtExpr = nullptr);
   void constraintCVarToWild(CVarOption CVar, const std::string &Rsn,
                             Expr *AtExpr = nullptr);

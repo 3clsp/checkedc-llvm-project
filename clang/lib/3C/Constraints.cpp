@@ -474,7 +474,7 @@ void Constraints::solve() {
 
   if (_3COpts.DebugSolver) {
     errs() << "solution, when done solving\n";
-    Environment.dump();
+    dump();
   }
 }
 

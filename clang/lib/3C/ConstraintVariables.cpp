@@ -1139,12 +1139,15 @@ FunctionVariableConstraint::FunctionVariableConstraint(
   if (DidConvert) TypeParams = Index;
 }
 
-void FunctionVariableConstraint::constrainToWild(
+bool FunctionVariableConstraint::constrainToWild(
     Constraints &CS, const ReasonLoc &Rsn) const {
-  ReturnVar.ExternalConstraint->constrainToWild(CS, Rsn);
+  bool Added = false;
+  Added = ReturnVar.ExternalConstraint->constrainToWild(CS, Rsn);
 
   for (const auto &V : ParamVars)
-    V.ExternalConstraint->constrainToWild(CS, Rsn);
+    Added = V.ExternalConstraint->constrainToWild(CS, Rsn);
+  
+  return Added;
 }
 bool FunctionVariableConstraint::anyChanges(const EnvironmentMap &E) const {
   return ReturnVar.ExternalConstraint->anyChanges(E) ||
@@ -1247,8 +1250,10 @@ void FunctionVariableConstraint::equateArgumentConstraints(ProgramInfo &Info,
   }
 }
 
-void PointerVariableConstraint::constrainToWild(Constraints &CS,
+bool PointerVariableConstraint::constrainToWild(Constraints &CS,
                                                 const ReasonLoc &Rsn) const {
+
+  bool Added = false;
   // Find the first VarAtom. All atoms before this are ConstAtoms, so
   // constraining them isn't useful;
   VarAtom *FirstVA = nullptr;
@@ -1262,10 +1267,12 @@ void PointerVariableConstraint::constrainToWild(Constraints &CS,
   // implicitly constrained to WILD because of GEQ constraints that exist
   // between levels of a pointer.
   if (FirstVA)
-    CS.addConstraint(CS.createGeq(FirstVA, CS.getWild(), Rsn, true));
+    Added = CS.addConstraint(CS.createGeq(FirstVA, CS.getWild(), Rsn, true));
 
   if (FV)
-    FV->constrainToWild(CS, Rsn);
+    Added = FV->constrainToWild(CS, Rsn);
+  
+  return Added;
 }
 
 void PointerVariableConstraint::constrainIdxTo(Constraints &CS, ConstAtom *C,

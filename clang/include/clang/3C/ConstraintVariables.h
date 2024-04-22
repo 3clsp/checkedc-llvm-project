@@ -152,7 +152,7 @@ public:
   virtual bool solutionEqualTo(Constraints &, const ConstraintVariable *,
                                bool ComparePtyp = true) const = 0;
 
-  virtual void constrainToWild(Constraints &CS, const ReasonLoc &Rsn) const = 0;
+  virtual bool constrainToWild(Constraints &CS, const ReasonLoc &Rsn) const = 0;
 
   // Return true if this variable was checked in the input. Checked variables
   // might solve to WILD, and unchecked variables might solve to checked. Use
@@ -534,7 +534,7 @@ public:
   void dump() const override { print(llvm::errs()); }
   void dumpJson(llvm::raw_ostream &O) const override;
 
-  void constrainToWild(Constraints &CS, const ReasonLoc &Rsn) const override;
+  bool constrainToWild(Constraints &CS, const ReasonLoc &Rsn) const override;
   void constrainOuterTo(Constraints &CS, ConstAtom *C, const ReasonLoc &Rsn,
                         bool DoLB = false, bool Soft = false);
   void constrainIdxTo(Constraints &CS, ConstAtom *C, unsigned int Idx,
@@ -741,7 +741,7 @@ public:
   void dump() const override { print(llvm::errs()); }
   void dumpJson(llvm::raw_ostream &O) const override;
 
-  void constrainToWild(Constraints &CS, const ReasonLoc &Rsn) const override;
+  bool constrainToWild(Constraints &CS, const ReasonLoc &Rsn) const override;
   bool anyChanges(const EnvironmentMap &E) const override;
   bool hasWild(const EnvironmentMap &E, int AIdx = -1) const override;
   bool hasArr(const EnvironmentMap &E, int AIdx = -1) const override;
