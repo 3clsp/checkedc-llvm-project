@@ -312,6 +312,15 @@ inline const clang::DiagnosticBuilder &operator<<(
   return DB;
 }
 
+// Given a function text and a parameter index, return the text of the
+// parameter at that index. This is useful when source have qualifiers
+// that are not available in the AST. This function assumes that the
+// function text is well-formed and the parameter index is valid.
+llvm::StringRef getParamTextFromFunctionText(llvm::StringRef FunctionText,
+                                             unsigned ParamIndex);
+
+std::string getDirectionQualifiers(llvm::StringRef ParamText);
+
 // Marker for conditions that we might want to make into non-fatal assertions
 // once we have an API design for them
 // (https://github.com/correctcomputation/checkedc-clang/issues/745). An inline

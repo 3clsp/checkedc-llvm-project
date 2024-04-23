@@ -745,7 +745,7 @@ bool FunctionDeclBuilder::VisitFunctionDecl(FunctionDecl *FD) {
         this->buildDeclVar(CV, PVDecl, PVDecl->getQualifiedNameAsString(),
                            RewriteGeneric, RewriteParams, RewriteReturn,
                            FD->isStatic(), GenerateSDecls, FuncName, FD);
-      ParmStrs.push_back(RD.Type + RD.IType);
+      ParmStrs.push_back(CV->getDirectionQualifiers() + RD.Type + RD.IType);
       if (!RD.SupplementaryDecl.empty())
         SDecls.push_back(RD.SupplementaryDecl);
       ProtoHasItype |= !RD.IType.empty();
@@ -758,7 +758,7 @@ bool FunctionDeclBuilder::VisitFunctionDecl(FunctionDecl *FD) {
       RewrittenDecl RD =
         this->buildDeclVar(CV, PVDecl, "", RewriteGeneric, RewriteParams,
                            RewriteReturn, FD->isStatic(), GenerateSDecls, FuncName, FD);
-      ParmStrs.push_back(RD.Type + RD.IType);
+      ParmStrs.push_back(CV->getDirectionQualifiers() + RD.Type + RD.IType);
       if (!RD.SupplementaryDecl.empty())
         SDecls.push_back(RD.SupplementaryDecl);
       ProtoHasItype |= !RD.IType.empty();

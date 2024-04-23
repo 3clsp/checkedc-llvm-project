@@ -316,6 +316,12 @@ public:
   static PointerVariableConstraint *
   derefPVConstraint(PointerVariableConstraint *PVC);
 
+  void setDirectionQualifiers(std::string &Qualifiers) {
+    DirectionQualifiers = Qualifiers;
+  }
+
+  std::string getDirectionQualifiers() const { return DirectionQualifiers; }
+
 private:
   std::string BaseType;
   CAtoms Vars;
@@ -340,6 +346,10 @@ private:
   // string is empty if the variable did not have an itype OR if the itype was
   // implicitly declared by a bounds declaration on an unchecked pointer.
   std::string ItypeStr;
+
+  // This represents the direction qualifiers for the pointer.
+  // It will only exist if the pointer is part of a function prototype.
+  std::string DirectionQualifiers;
 
   // Get the qualifier string (e.g., const, etc) for the provided
   // pointer type into the provided string stream (ss).
@@ -623,6 +633,15 @@ public:
   void setGenericIndex(int idx) {
     ExternalConstraint->setGenericIndex(idx);
     InternalConstraint->setGenericIndex(idx);
+  }
+
+  void setDirectionQualifiers(std::string &Qualifiers) {
+    ExternalConstraint->setDirectionQualifiers(Qualifiers);
+  }
+
+  std::string getDirectionQualifiers() const {
+    // We return with a space at the end to make it easier to concatenate.
+    return ExternalConstraint->getDirectionQualifiers() + " ";
   }
 
   void equateWithItype(ProgramInfo &CS,

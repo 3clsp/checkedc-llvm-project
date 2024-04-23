@@ -1058,6 +1058,13 @@ FunctionVariableConstraint::FunctionVariableConstraint(
       if (TypeLoc TL = TSInfo->getTypeLoc())
         FTL = getBaseTypeLoc(TL).getAs<FunctionTypeLoc>();
 
+    // Get function text from source.
+    SourceRange SR = D->getSourceRange();
+    SourceLocation B = SR.getBegin();
+    SourceLocation E = SR.getEnd();
+    StringRef FuncText = Lexer::getSourceText(CharSourceRange::getCharRange(B, E),
+                                              Ctx.getSourceManager(), Ctx.getLangOpts());
+
     // Extract the types for the parameters to this function. If the parameter
     // has a bounds expression associated with it, substitute the type of that
     // bounds expression for the other type.
@@ -1077,10 +1084,15 @@ FunctionVariableConstraint::FunctionVariableConstraint(
       if (ParmVD == nullptr && FTL && J < FTL.getNumParams())
         ParmVD = FTL.getParam(J);
       std::string PName = ParmVD ? ParmVD->getName().str() : "";
-
       auto ParamVar =
           FVComponentVariable(QT, ITypeT, ParmVD, PName, I, Ctx,
                               &N, true, ParamHasItype);
+      
+      StringRef ParamText = getParamTextFromFunctionText(FuncText, J);
+      std::string DirQualifiers = getDirectionQualifiers(ParamText);
+      if (!DirQualifiers.empty())
+        ParamVar.setDirectionQualifiers(DirQualifiers);
+      
       ParamVars.push_back(ParamVar);
     }
 

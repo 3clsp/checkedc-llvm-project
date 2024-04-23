@@ -970,3 +970,40 @@ SourceRange getDeclSourceRangeWithAnnotations(const clang::Decl *D,
   SR.setEnd(DeclEnd);
   return SR;
 }
+
+StringRef getParamTextFromFunctionText(StringRef FunctionText,
+                                       unsigned ParamIndex) {
+  // Find the start of the parameter list.
+  size_t Start = FunctionText.find('(');
+  if (Start == StringRef::npos)
+    return "";
+  // Find the end of the parameter list.
+  size_t End = FunctionText.find(')', Start);
+  if (End == StringRef::npos)
+    return "";
+  // Extract the parameter list.
+  StringRef ParamList = FunctionText.slice(Start + 1, End);
+  // Split the parameter list into individual parameters.
+  SmallVector<StringRef, 256> Params;
+  ParamList.split(Params, ',', -1, false);
+  if (ParamIndex >= Params.size())
+    return "";
+  return Params[ParamIndex].trim();
+}
+
+std::string getDirectionQualifiers(StringRef ParamText) {
+  std::string Qualifiers;
+  if (ParamText.contains("IN"))
+    Qualifiers += "IN";
+  if (ParamText.contains("OUT")) {
+    if (!Qualifiers.empty())
+      Qualifiers += " ";
+    Qualifiers += "OUT";
+  }
+  if (ParamText.contains("OPTIONAL")) {
+    if (!Qualifiers.empty())
+      Qualifiers += " ";
+    Qualifiers += "OPTIONAL";
+  }
+  return Qualifiers;
+}
