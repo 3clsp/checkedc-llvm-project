@@ -1058,12 +1058,17 @@ FunctionVariableConstraint::FunctionVariableConstraint(
       if (TypeLoc TL = TSInfo->getTypeLoc())
         FTL = getBaseTypeLoc(TL).getAs<FunctionTypeLoc>();
 
+    StringRef FuncText = "";
     // Get function text from source.
-    SourceRange SR = D->getSourceRange();
-    SourceLocation B = SR.getBegin();
-    SourceLocation E = SR.getEnd();
-    StringRef FuncText = Lexer::getSourceText(CharSourceRange::getCharRange(B, E),
-                                              Ctx.getSourceManager(), Ctx.getLangOpts());
+    if (D) {
+      SourceRange SR = D->getSourceRange();
+      if (SR.isValid()) {
+        SourceLocation B = SR.getBegin();
+        SourceLocation E = SR.getEnd();
+        FuncText = Lexer::getSourceText(CharSourceRange::getCharRange(B, E),
+                                                Ctx.getSourceManager(), Ctx.getLangOpts());
+      }
+    }
 
     // Extract the types for the parameters to this function. If the parameter
     // has a bounds expression associated with it, substitute the type of that

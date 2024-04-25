@@ -973,6 +973,10 @@ SourceRange getDeclSourceRangeWithAnnotations(const clang::Decl *D,
 
 StringRef getParamTextFromFunctionText(StringRef FunctionText,
                                        unsigned ParamIndex) {
+  
+  if (FunctionText.empty()) {
+    return "";
+  }
   // Find the start of the parameter list.
   size_t Start = FunctionText.find('(');
   if (Start == StringRef::npos)
