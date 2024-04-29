@@ -184,6 +184,8 @@ public:
 
   VoidInfoAggregator &getVIA() { return VIA; }
 
+  MacroInfoAggregator &getMIA() { return MIA; }
+
   // Store mapping from ASTContexts to a unique index in the ASTs vector in
   // the ProgramInfo object. This function must be called prior to any AST
   // traversals so that the map is populated.
@@ -268,6 +270,9 @@ private:
 
   // This class collects all void pointer information that can later be dumped.
   VoidInfoAggregator VIA;
+
+  // This class collects information about pointers inside macros.
+  MacroInfoAggregator MIA;
 
   // Inserts the given FVConstraint set into the extern or static function map.
   // Returns the merged version if it was a redeclaration, or the constraint

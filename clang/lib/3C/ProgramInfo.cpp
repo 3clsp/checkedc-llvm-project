@@ -839,8 +839,10 @@ void ProgramInfo::removePersistentConstraints(Expr *E, ASTContext *C) {
 void ProgramInfo::constrainWildIfMacro(ConstraintVariable *CV,
                                        SourceLocation Location,
                                        const ReasonLoc &Rsn) {
-  if (!Rewriter::isRewritable(Location))
+  if (!Rewriter::isRewritable(Location)) {
+    getMIA().addMacroInfo(Rsn.Location);
     CV->constrainToWild(CS, Rsn);
+  }
 }
 
 //std::string ProgramInfo::getUniqueDeclKey(Decl *D, ASTContext *C) {

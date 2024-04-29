@@ -382,3 +382,34 @@ std::string VoidInfoAggregator::getTypeString(VoidInfoMapType::VType Type) {
   }
   return "Unknown";
 }
+
+void MacroInfoAggregator::dumpStats(std::string FilePath) {
+  std::error_code EC;
+  llvm::raw_fd_ostream Output(FilePath, EC, llvm::sys::fs::F_Text);
+
+  if (!EC) {
+    Output << "[";
+    bool First = true;
+    for (auto &It : getData()) {
+      if (!First)
+        Output << ",";
+      else
+        First = false;
+
+      Output << "{\"file\":\"" << It.getFileName() << "\",";
+      Output << "\"line\":" << It.getLineNo() << ",";
+      Output << "\"colstart\":" << It.getColSNo() << ",";
+      Output << "\"colend\":" << It.getColENo() << "}";
+    }
+    Output << "]";
+  }
+}
+
+void MacroInfoAggregator::addMacroInfo(const PersistentSourceLoc &Loc) {
+  std::vector<PersistentSourceLoc> &M = getData();
+  for (auto &It : M) {
+    if (It == Loc)
+      return;
+  }
+  M.push_back(Loc);
+}

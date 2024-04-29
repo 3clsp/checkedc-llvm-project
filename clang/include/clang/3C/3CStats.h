@@ -163,4 +163,10 @@ class VoidInfoAggregator : public RootCauseAggregator<std::vector<VoidInfoMapTyp
     std::string getTypeString(VoidInfoMapType::VType Type);
 };
 
+class MacroInfoAggregator : public RootCauseAggregator<std::vector<PersistentSourceLoc>> {
+  public:
+    void dumpStats(std::string FilePath) override;
+    void addMacroInfo(const PersistentSourceLoc &Loc);
+};
+
 #endif // LLVM_CLANG_3C_3CSTATS_H
