@@ -51,7 +51,7 @@ public:
   CVars getWildAffectedCKeys(const std::set<ConstraintKey> &DWKeys);
   void printStats(llvm::raw_ostream &O);
   void printRCMap(llvm::raw_ostream &O, Constraints &CS);
-  void printRootCauseStats(raw_ostream &O, Constraints &CS);
+  std::vector<PersistentSourceLoc> printRootCauseStats(raw_ostream &O, Constraints &CS);
   int getNumPtrsAffected(ConstraintKey CK);
 
   std::map<ConstraintKey, RootCauseDiagnostic> RootWildAtomsWithReason;
@@ -92,8 +92,8 @@ private:
 
   float getPtrAffectedScore(const std::set<ConstraintVariable *> CVs);
 
-  void printConstraintStats(raw_ostream &O, Constraints &CS,
-                            ConstraintKey Cause);
+  const PersistentSourceLoc printConstraintStats(raw_ostream &O, Constraints &CS,
+                                                 ConstraintKey Cause);
 };
 
 #endif // LLVM_CLANG_3C_3CINTERACTIVEDATA_H

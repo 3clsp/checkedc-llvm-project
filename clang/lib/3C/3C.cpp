@@ -710,7 +710,6 @@ bool _3CInterface::dumpStats() {
   if (_3COpts.DumpStats) {
     GlobalProgramInfo->getCIA().dumpStats("Invalid_casts_aggregate.json");
     GlobalProgramInfo->getVIA().dumpStats("Void_pointers_aggregate.json");
-    GlobalProgramInfo->getMIA().dumpStats("Macro_Wild_pointers_aggregate.json");
     GlobalProgramInfo->printStats(FilePaths, llvm::errs(), true);
     assert(CStateisclear == true);
     GlobalProgramInfo->computeInterimConstraintState(FilePaths);
@@ -735,11 +734,14 @@ bool _3CInterface::dumpStats() {
 
     llvm::raw_fd_ostream PerWildPtrInfo(_3COpts.PerWildPtrInfoJson, Ec);
     if (!PerWildPtrInfo.has_error()) {
-      GlobalProgramInfo->getInterimConstraintState().printRootCauseStats(
-          PerWildPtrInfo, GlobalProgramInfo->getConstraints());
+      std::vector<PersistentSourceLoc> PSLs =
+        GlobalProgramInfo->getInterimConstraintState().printRootCauseStats(
+            PerWildPtrInfo, GlobalProgramInfo->getConstraints());
       PerWildPtrInfo.close();
+      GlobalProgramInfo->getMIA().addMacroInfo(PSLs);
     }
 
+    GlobalProgramInfo->getMIA().dumpStats("Macro_Wild_pointers_aggregate.json");
     llvm::raw_fd_ostream RCMap("RCMap.json", Ec);
     if (!RCMap.has_error()) {
       GlobalProgramInfo->getInterimConstraintState().printRCMap(

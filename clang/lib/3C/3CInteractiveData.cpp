@@ -116,22 +116,29 @@ void ConstraintsInfo::printRCMap(llvm::raw_ostream &O,
   O << "]}";
 }
 
-void ConstraintsInfo::printRootCauseStats(llvm::raw_ostream &O,
-                                          Constraints &CS) {
+std::vector<PersistentSourceLoc>
+  ConstraintsInfo::printRootCauseStats(llvm::raw_ostream &O,
+                                       Constraints &CS) {
+  std::vector<PersistentSourceLoc> PSLs;
   O << "{\"RootCauseStats\":[";
   bool AddComma = false;
   for (auto &T : AllWildAtoms) {
     if (AddComma)
       O << ",\n";
-    printConstraintStats(O, CS, T);
+    const PersistentSourceLoc CurrPSL = printConstraintStats(O, CS, T);
+    if (CurrPSL.valid() && 
+        std::find(PSLs.begin(), PSLs.end(), CurrPSL) == PSLs.end())
+      PSLs.push_back(CurrPSL);
     AddComma = true;
   }
   O << "]}";
+  return PSLs;
 }
 
-void ConstraintsInfo::printConstraintStats(llvm::raw_ostream &O,
-                                           Constraints &CS,
-                                           ConstraintKey Cause) {
+const PersistentSourceLoc
+  ConstraintsInfo::printConstraintStats(llvm::raw_ostream &O,
+                                        Constraints &CS,
+                                        ConstraintKey Cause) {
   O << "{\"ConstraintKey\":" << Cause << ", ";
   O << "\"Name\":\"" << CS.getVar(Cause)->getStr() << "\", ";
   RootCauseDiagnostic PtrInfo = RootWildAtomsWithReason.at(Cause);
@@ -170,6 +177,11 @@ void ConstraintsInfo::printConstraintStats(llvm::raw_ostream &O,
     O << "}";
   }
   O << "]}";
+  
+  if (PtrInfo.getReason() == MACRO_REASON)
+    return PSL;
+  else
+    return PersistentSourceLoc();
 }
 
 int ConstraintsInfo::getNumPtrsAffected(ConstraintKey CK) {

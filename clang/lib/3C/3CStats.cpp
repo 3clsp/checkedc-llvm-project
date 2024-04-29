@@ -405,11 +405,9 @@ void MacroInfoAggregator::dumpStats(std::string FilePath) {
   }
 }
 
-void MacroInfoAggregator::addMacroInfo(const PersistentSourceLoc &Loc) {
+void MacroInfoAggregator::addMacroInfo(std::vector<PersistentSourceLoc> &Locs) {
   std::vector<PersistentSourceLoc> &M = getData();
-  for (auto &It : M) {
-    if (It == Loc)
-      return;
+  for (auto &It : Locs) {
+    M.push_back(It);
   }
-  M.push_back(Loc);
 }
