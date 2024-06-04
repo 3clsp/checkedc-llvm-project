@@ -641,7 +641,8 @@ public:
 
   std::string getDirectionQualifiers() const {
     // We return with a space at the end to make it easier to concatenate.
-    return ExternalConstraint->getDirectionQualifiers() + " ";
+    return ExternalConstraint->getDirectionQualifiers().empty() ? ""
+	    : ExternalConstraint->getDirectionQualifiers() + " ";
   }
 
   void equateWithItype(ProgramInfo &CS,
