@@ -109,8 +109,15 @@ void ConstraintsInfo::printRCMap(llvm::raw_ostream &O,
       O << "\"Location\":" << llvm::json::Value(PSL.toString()) << ", ";
     else
       O << "\"Location\":null, ";
-    O << "\"Reasons\":" << T.second.size();
-    O << "}";
+    O << "\"Reasons\": [";
+    bool AddComma2 = false;
+    for (auto &R : T.second) {
+      if (AddComma2)
+        O << ",\n";
+      O << "\"" << R << "\"";
+      AddComma2 = true;
+    }
+    O << "]}";
     AddComma = true;
   }
   O << "]}";
