@@ -249,6 +249,12 @@ static cl::opt<bool> OptAllowMultiGenericParams(
     cl::desc("Allow multiple generic parameters in a function."),
     cl::init(false), cl::cat(_3CCategory));
 
+static cl::opt<bool> OptIgnoreDeclaredSingletonArrays(
+    "ignore-declared-singleton-arrays",
+    cl::desc("Arrays declared with a single element are not considered in "
+             "bounds inference."),
+    cl::init(false), cl::cat(_3CCategory));
+
 static cl::opt<bool> OptItypesForExtern(
     "itypes-for-extern",
     cl::desc("All functions with external linkage will be rewritten to use "
@@ -388,6 +394,7 @@ int main(int argc, const char **argv) {
   CcOptions.KnownSafeCasts = OptKnownSafeCasts;
   CcOptions.ConsiderCompatibleCasts = OptConsiderCompatibleCasts;
   CcOptions.AllowMultiGenericParams = OptAllowMultiGenericParams;
+  CcOptions.IgnoreDeclaredSingletonArrays = OptIgnoreDeclaredSingletonArrays;
   CcOptions.AllowUnwritableChanges = OptAllowUnwritableChanges;
   CcOptions.AllowRewriteFailures = OptAllowRewriteFailures;
   CcOptions.ItypesForExtern = OptItypesForExtern;

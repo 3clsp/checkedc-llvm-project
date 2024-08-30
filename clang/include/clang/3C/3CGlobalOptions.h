@@ -54,6 +54,7 @@ struct _3COptions {
   bool IgnoreUnsafeCasts;
   bool ConsiderCompatibleCasts;
   bool AllowMultiGenericParams;
+  bool IgnoreDeclaredSingletonArrays;
   std::string KnownSafeCasts;
 #ifdef FIVE_C
   bool RemoveItypes;

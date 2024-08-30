@@ -1766,6 +1766,13 @@ void AVarBoundsInfo::addConstantArrayBounds(ProgramInfo &I) {
           ConstantCount--;
         }
 
+        if (_3COpts.IgnoreDeclaredSingletonArrays)
+          if (ConstantCount == 1) {
+            // If the array has a size of 1, then it is a pointer to a single
+            // object. We should not add bounds to it because it is not an array.
+            continue;
+          }
+
         // Insert this as a declared constant count bound for the constraint
         // variable.
         BoundsKey CBKey = getConstKey(ConstantCount);

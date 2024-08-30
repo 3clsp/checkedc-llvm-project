@@ -148,7 +148,16 @@ DeclRewriter::buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
     Defn->mkString(Info.getConstraints(),
                    MKSTRING_OPTS(EmitName = false, ForItype = true,
                                  UnmaskTypedef = IsUncheckedTypedef), &IsGeneric) + ")";
-  IType += ABR.getBoundsString(Defn, Decl, true, NeedsFreshLowerBound);
+  std::string BoundsString = ABR.getBoundsString(Defn, Decl, true, NeedsFreshLowerBound);
+
+  if (IsGeneric) {
+    // If the type is generic, and boundsstring has count, replace it with byte_count
+    if (BoundsString.find("count") != std::string::npos) {
+      BoundsString = BoundsString.replace(BoundsString.find("count"), 5, "byte_count");
+    }
+  }
+
+  IType += BoundsString;
 
   PersistentSourceLoc PSL = PersistentSourceLoc::mkPSL(Decl, Context);
   if (IsGeneric)
