@@ -379,6 +379,8 @@ bool AvarBoundsInference::predictBounds(BoundsKey K,
   bool IsFuncRet = BI->isFunctionReturn(K);
   ProgramVar *KVar = this->BI->getProgramVar(K);
 
+  bool SkippedNeighbours = false;
+  bool IsCountOne = false;
   // Bounds inferred from each of the neighbours.
   std::map<BoundsKey, BndsKindMap> InferredNBnds;
   // For each of the Neighbour, try to infer possible bounds.
@@ -386,6 +388,10 @@ bool AvarBoundsInference::predictBounds(BoundsKey K,
     ErrorOccurred = false;
     BndsKindMap NeighboursBnds;
     getRelevantBounds(NBK, NeighboursBnds);
+    if (NeighboursBnds.empty()) {
+      // If there are no bounds for the neighbour, then mark it.
+      SkippedNeighbours = true;    
+    }
     if (!NeighboursBnds.empty()) {
       for (auto &NKBChoice : NeighboursBnds) {
         ABounds::BoundsKind NeighbourKind = NKBChoice.first;
@@ -397,6 +403,13 @@ bool AvarBoundsInference::predictBounds(BoundsKey K,
 
         if (!InfBK.empty()) {
           InferredNBnds[NBK][NeighbourKind] = InfBK;
+          // If any neighbour has count bounds of 1, then mark it.
+          for (auto INBK : InfBK) {
+            ProgramVar *NBVar = this->BI->getProgramVar(INBK);
+            if (NBVar != nullptr && NBVar->isNumConstant() &&
+                NBVar->getConstantVal() == 1)
+              IsCountOne = true;
+          }
         } else {
           bool IsDeclaredB = areDeclaredBounds(NBK, NKBChoice);
 
@@ -428,6 +441,15 @@ bool AvarBoundsInference::predictBounds(BoundsKey K,
       break;
     }
   }
+
+  // Consider this case only if --ignore-declared-singleton-arrays is set.
+  if (_3COpts.IgnoreDeclaredSingletonArrays)
+    if (SkippedNeighbours && IsCountOne) {
+      // Don't infer bounds for K if we skipped some neighbours and one of the
+      // neighbours has count bounds of 1.
+      // setImpossibleBounds(K);
+      return false;
+    }
 
   bool IsChanged = false;
   if (!InferredNBnds.empty()) {
@@ -1765,13 +1787,6 @@ void AVarBoundsInfo::addConstantArrayBounds(ProgramInfo &I) {
                  ConstantCount != 0);
           ConstantCount--;
         }
-
-        if (_3COpts.IgnoreDeclaredSingletonArrays)
-          if (ConstantCount == 1) {
-            // If the array has a size of 1, then it is a pointer to a single
-            // object. We should not add bounds to it because it is not an array.
-            continue;
-          }
 
         // Insert this as a declared constant count bound for the constraint
         // variable.
