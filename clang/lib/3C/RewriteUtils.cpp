@@ -463,6 +463,12 @@ public:
           !FD->isItypeGenericFunction())
         return true;
 
+      // This check is to filter cases where GenericParams are inferred
+      // but the function is not actually converted.
+      if (!Info.getFuncConstraint(FD, Context)->isActuallyConverted() &&
+          !FD->isItypeGenericFunction())
+        return true;
+
       if (Info.hasTypeParamBindings(CE, Context)) {
         // Construct a string containing concatenation of all type arguments for
         // the function call.

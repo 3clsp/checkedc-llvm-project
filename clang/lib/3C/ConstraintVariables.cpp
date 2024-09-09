@@ -1134,9 +1134,10 @@ FunctionVariableConstraint::FunctionVariableConstraint(
   // Also exclude params that are checked or have itypes
   bool ConvertFunc = canWrite(FileName) && !IsFunctionPtr &&
                         TypeParams == 0 &&
-                        // Either function should have a body or InferTypesForUndefs
-                        // flag should be passed.
-                        (_3COpts.InferTypesForUndefs || hasBody());
+                        // Either function should have a body or
+                        // InferTypesForUndefs flag should be passed.
+                        (_3COpts.InferTypesForUndefs || hasBody() ||
+                         _3COpts.AllowMultiGenericParams);
   if (!_3COpts.AllowMultiGenericParams)
     ConvertFunc = ConvertFunc && (Voids.size() == 1);
   bool DidConvert = false;
@@ -2242,14 +2243,14 @@ FVComponentVariable::FVComponentVariable(const QualType &QT,
       new PVConstraint(QT, D, N, I, C, InFunc, -1, PotentialGeneric, HasItype,
                        nullptr, ITypeT);
   if (!HasItype && QT->isVoidPointerType()
-      && !(_3COpts.InferTypesForUndefs || _3COpts.AllowMultiGenericParams)) {
+      && !(_3COpts.AllowMultiGenericParams)) {
     InternalConstraint = ExternalConstraint;
   } else {
     InternalConstraint =
         new PVConstraint(QT, D, N, I, C, InFunc, -1, PotentialGeneric, HasItype,
                          nullptr, ITypeT);
     bool EquateChecked = QT->isVoidPointerType();
-    if ((_3COpts.InferTypesForUndefs || _3COpts.AllowMultiGenericParams)
+    if ((_3COpts.AllowMultiGenericParams)
          && EquateChecked)
       EquateChecked = false;
     linkInternalExternal(I, EquateChecked);

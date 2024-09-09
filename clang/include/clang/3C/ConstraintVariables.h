@@ -676,6 +676,11 @@ private:
   // Count of type parameters (originally from `_Itype_for_any(...)`).
   int TypeParams;
 
+  // This is neede in cases where TypeParams are infered but we
+  // couldn't make the function as generic due to the function
+  // not having a body.
+  bool ActuallyConverted = false;
+
   void equateFVConstraintVars(ConstraintVariable *CV, ProgramInfo &Info,
                               ReasonLoc &Rsn) const;
 
@@ -736,6 +741,15 @@ public:
   int getGenericParams() const {
     return TypeParams;
   }
+
+  void setActuallyConverted() {
+    ActuallyConverted = true;
+  }
+
+  bool isActuallyConverted() const {
+    return ActuallyConverted;
+  }
+
   // remove added generics
   // use when we constrain a potential generic param to wild
   void resetGenericParams() {

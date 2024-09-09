@@ -951,6 +951,11 @@ FunctionDeclBuilder::buildDeclVar(const FVComponentVariable *CV,
 
   bool CheckedSolution = CV->hasCheckedSolution(Info.getConstraints());
   bool ItypeSolution = CV->hasItypeSolution(Info.getConstraints());
+
+  FVConstraint *FVC = Info.getFuncConstraint(FD, Context);
+  if (CheckedSolution || ItypeSolution)
+    FVC->setActuallyConverted();
+
   if (ItypeSolution ||
       (CheckedSolution && _3COpts.ItypesForExtern && !StaticFunc)) {
     return buildItypeDecl(CV->getExternal(), Decl, UseName, RewriteParm, RewriteRet,
