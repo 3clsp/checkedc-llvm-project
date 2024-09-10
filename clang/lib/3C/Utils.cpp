@@ -710,19 +710,20 @@ bool isUnsafeCastInAllowedList(clang::QualType SrcType, clang::QualType DstType)
     return false;
   }
 
-  // Process the JSON data
-  if (auto *Object = Json->getAsObject()) {
-    for (auto &Entry : *Object) {
-      std::string Key = Entry.getFirst().str();
-      std::string Value = Entry.getSecond().getAsString().getValue().str();
-      // If the SrcType and DstType are in the allowed list, return true.
-      if ((SameAsSrcType(Key) && SameAsDstType(Value)) ||
-          (SameAsSrcType(Value) && SameAsDstType(Key)))
-        return true;
+  if (auto *Array = Json->getAsArray()) {
+    for (auto &Element : *Array) {
+      if (auto *Object = Element.getAsObject()) {
+        std::string SrcType = Object->getString("Src").getValue().str();
+        std::string DstType = Object->getString("Dst").getValue().str();
+        // If the SrcType and DstType are in the allowed list, return true.
+        if ((SameAsSrcType(SrcType) && SameAsDstType(DstType)) ||
+            (SameAsSrcType(DstType) && SameAsDstType(SrcType)))
+          return true;
+      } else {
+        errs() << "JSON is not an object\n";
+        return false;
+      }
     }
-  } else {
-    errs() << "JSON is not an object\n";
-    return false;
   }
 
   return false;
