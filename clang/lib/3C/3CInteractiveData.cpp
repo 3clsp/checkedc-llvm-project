@@ -112,6 +112,15 @@ void ConstraintsInfo::printRCMap(llvm::raw_ostream &O,
     O << "\"Reasons\": [";
     bool AddComma2 = false;
     for (auto &R : T.second) {
+      // If the name has `_tyarg_` and the location is 
+      // invalid, then it is a type argument and we don't
+      // want to count it as a root cause.
+      std::string Name = CS.getVar(R)->getStr();
+      RootCauseDiagnostic PtrInfo = RootWildAtomsWithReason.at(R);
+      PersistentSourceLoc PSL = PtrInfo.getLocation();
+      if (Name.find("_tyarg_") != std::string::npos &&
+          !PSL.valid())
+        continue;
       if (AddComma2)
         O << ",\n";
       O << "\"" << R << "\"";
