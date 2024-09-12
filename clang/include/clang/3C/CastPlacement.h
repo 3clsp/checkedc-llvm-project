@@ -63,12 +63,17 @@ private:
 
   std::pair<std::string, std::string> getCastString(ConstraintVariable *Dst,
                                                     ConstraintVariable *TypeVar,
-                                                    CastNeeded CastKind);
+                                                    CastNeeded CastKind,
+                                                    std::string PossibleAssumeCast="");
 
   void surroundByCast(ConstraintVariable *Dst,
                       ConstraintVariable *TypeVar,
-                      CastNeeded CastKind, Expr *E);
+                      CastNeeded CastKind, Expr *E,
+                      std::string PossibleAssumeCast="");
   void reportCastInsertionFailure(Expr *E, const std::string &CastStr);
   void updateRewriteStats(CastNeeded CastKind);
+  // This function finds what type we should cast to when we are inserting an
+  // _Assume_bounds_cast.
+  std::string getPossibleAssumeCastType(CallExpr *CE, unsigned PIdx, FVConstraint *FV);
 };
 #endif // LLVM_CLANG_3C_CASTPLACEMENT_H

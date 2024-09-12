@@ -75,7 +75,8 @@ bool CastPlacementVisitor::VisitCallExpr(CallExpr *CE) {
         CastNeeded CastKind = needCasting(
             ArgC, ArgC, FV->getInternalParam(PIdx), FV->getExternalParam(PIdx));
         if (CastKind != NO_CAST) {
-          surroundByCast(FV->getExternalParam(PIdx), TypeVar, CastKind, A);
+          std::string PossibleCastType = getPossibleAssumeCastType(CE, PIdx, FV);
+          surroundByCast(FV->getExternalParam(PIdx), TypeVar, CastKind, A, PossibleCastType);
           ExprsWithCast.insert(ignoreCheckedCImplicit(A));
           break;
         }
@@ -107,6 +108,80 @@ bool CastPlacementVisitor::VisitCallExpr(CallExpr *CE) {
     }
   }
   return true;
+}
+
+std::string CastPlacementVisitor::getPossibleAssumeCastType(CallExpr *CE,
+                                                            unsigned PIdx,
+                                                            FVConstraint *FV) {
+  AVarBoundsInfo &ABI = Info.getABoundsInfo();
+  BoundsKey BK = FV->getExternalParam(PIdx)->getBoundsKey();
+  // Get the bounds associated with the parameter.
+  ABounds *B = ABI.getBounds(BK);
+  if (B == nullptr) {
+    // If the parameter has no bounds, we can't do anything.
+    // But this case shouldn't ideally happen.
+    return "";
+  }
+  ABounds::BoundsKind BKnd = B->getKind();
+  std::string Prefix = "";
+  std::string Suffix = ")";
+  if (BKnd == ABounds::ByteBoundKind)
+    Prefix = "byte_count(";
+  else if (B->getLowerBoundKey() != 0)
+    Prefix = "bounds(";
+  else
+    Prefix = "count(";
+
+  unsigned LBKIdx = 0;
+  unsigned LKIdx = 0;
+  // We build using the LowerBoundKey + LengthKey.
+  if (B->getLowerBoundKey() != 0) {
+    BoundsKey LBK = B->getLowerBoundKey();
+    BoundsKey LK = B->getLengthKey();
+    if (!ABI.isFuncParamBoundsKey(LBK, LBKIdx)) {
+      // If the LowerBoundKey is not part of the function
+      // parameter, we can't do anything.
+      return "";
+    }
+    // LengthKey can be a function parameter or a constant.
+    ProgramVar *LKVar = ABI.getProgramVar(LK);
+    if (LKVar == nullptr) {
+      // If the LengthKey is not found.
+      return "";
+    }
+    std::string LKStr = LKVar->getVarName();
+    // If the LengthKey is a function parameter.
+    if (ABI.isFuncParamBoundsKey(LK, LBKIdx)) {
+      Expr *LKArg = CE->getArg(LKIdx);
+      if (LKArg == nullptr) {
+        // If the argument is not found.
+        return "";
+      }
+      LKStr = clang::tooling::getText(*LKArg, *Context).str();
+    }
+    Expr *LBKArg = CE->getArg(LBKIdx);
+    if (LBKArg == nullptr) {
+      // If the argument is not found.
+      return "";
+    }
+    llvm::StringRef LBKStr = clang::tooling::getText(*LBKArg, *Context);
+    return Prefix + LBKStr.str() + ", " +
+           LBKStr.str() + "+" + LKStr + Suffix;
+  } else {
+    BoundsKey LK = B->getLengthKey();
+    if (!ABI.isFuncParamBoundsKey(LK, LKIdx)) {
+      // If the LengthKey is not part of the function parameter, we can't do
+      // anything.
+      return "";
+    }
+    Expr *LKArg = CE->getArg(LKIdx);
+    if (LKArg == nullptr) {
+      // If the argument is not found, we can't do anything.
+      return "";
+    }
+    llvm::StringRef LKStr = clang::tooling::getText(*LKArg, *Context);
+    return Prefix + LKStr.str() + Suffix;
+  }
 }
 
 CastPlacementVisitor::CastNeeded CastPlacementVisitor::needCasting(
@@ -161,7 +236,8 @@ CastPlacementVisitor::CastNeeded CastPlacementVisitor::needCasting(
 std::pair<std::string, std::string>
 CastPlacementVisitor::getCastString(ConstraintVariable *Dst,
                                     ConstraintVariable *TypeVar,
-                                    CastNeeded CastKind) {
+                                    CastNeeded CastKind,
+                                    std::string PossibleAssumeCast) {
   switch (CastKind) {
   case CAST_NT_ARRAY:
     return std::make_pair("((" +
@@ -191,6 +267,8 @@ CastPlacementVisitor::getCastString(ConstraintVariable *Dst,
         Type = "_Nt_array_ptr<";
         Suffix = ", bounds(unknown))";
       }
+      if (!PossibleAssumeCast.empty())
+        Suffix = ", " + PossibleAssumeCast + ")";
     }
     // The destination's type may be generic, which would have an out-of-scope
     // type var, so use the already analysed local type var instead
@@ -211,7 +289,8 @@ CastPlacementVisitor::getCastString(ConstraintVariable *Dst,
 
 void CastPlacementVisitor::surroundByCast(ConstraintVariable *Dst,
                                           ConstraintVariable *TypeVar,
-                                          CastNeeded CastKind, Expr *E) {
+                                          CastNeeded CastKind, Expr *E,
+                                          std::string PossibleAssumeCast) {
   PersistentSourceLoc PSL = PersistentSourceLoc::mkPSL(E, *Context);
   if (!canWrite(PSL.getFileName())) {
     // 3C has known bugs that can cause attempted cast insertion in
@@ -227,7 +306,7 @@ void CastPlacementVisitor::surroundByCast(ConstraintVariable *Dst,
     return;
   }
 
-  auto CastStrs = getCastString(Dst, TypeVar, CastKind);
+  auto CastStrs = getCastString(Dst, TypeVar, CastKind, PossibleAssumeCast);
   // Is this check enough? Return suffix will be either ")" or ", bounds(unknown))"
   if (CastStrs.second == ", bounds(unknown))") {
     reportCustomDiagnostic(
