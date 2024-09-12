@@ -75,7 +75,10 @@ bool CastPlacementVisitor::VisitCallExpr(CallExpr *CE) {
         CastNeeded CastKind = needCasting(
             ArgC, ArgC, FV->getInternalParam(PIdx), FV->getExternalParam(PIdx));
         if (CastKind != NO_CAST) {
-          std::string PossibleCastType = getPossibleAssumeCastType(CE, PIdx, FV);
+          std::string PossibleCastType = "";
+          if (_3COpts.InferAssumeCastBounds) {
+            PossibleCastType = getPossibleAssumeCastType(CE, PIdx, FV);
+          }
           surroundByCast(FV->getExternalParam(PIdx), TypeVar, CastKind, A, PossibleCastType);
           ExprsWithCast.insert(ignoreCheckedCImplicit(A));
           break;
@@ -118,8 +121,8 @@ std::string CastPlacementVisitor::getPossibleAssumeCastType(CallExpr *CE,
   // Get the bounds associated with the parameter.
   ABounds *B = ABI.getBounds(BK);
   if (B == nullptr) {
-    // If the parameter has no bounds, we can't do anything.
-    // But this case shouldn't ideally happen.
+    // If the parameter has no bounds, we will not give assume bounds with unknown cast.
+    // Because the callee doesn't have the bounds, it should be fine.
     return "";
   }
   ABounds::BoundsKind BKnd = B->getKind();
@@ -267,8 +270,17 @@ CastPlacementVisitor::getCastString(ConstraintVariable *Dst,
         Type = "_Nt_array_ptr<";
         Suffix = ", bounds(unknown))";
       }
-      if (!PossibleAssumeCast.empty())
-        Suffix = ", " + PossibleAssumeCast + ")";
+      if (_3COpts.InferAssumeCastBounds) {
+        if (!PossibleAssumeCast.empty())
+          Suffix = ", " + PossibleAssumeCast + ")";
+        // If there is no bounds for the destination, we should not insert
+        // bounds in the cast.
+        BoundsKey BK = DstPVC->getBoundsKey();
+        AVarBoundsInfo &ABI = Info.getABoundsInfo();
+        ABounds *B = ABI.getBounds(BK);
+        if (B == nullptr)
+          Suffix = "";
+      }
     }
     // The destination's type may be generic, which would have an out-of-scope
     // type var, so use the already analysed local type var instead
