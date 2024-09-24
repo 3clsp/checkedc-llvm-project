@@ -12,6 +12,7 @@
 
 #include "clang/3C/ABounds.h"
 #include "clang/3C/AVarBoundsInfo.h"
+#include "clang/3C/3CGlobalOptions.h"
 
 ABounds *ABounds::getBoundsInfo(AVarBoundsInfo *ABInfo, BoundsExpr *BExpr,
                                 const ASTContext &C) {
@@ -72,12 +73,17 @@ CountBound::mkStringWithLowerBound(AVarBoundsInfo *ABI, clang::Decl *D) {
   std::string LowerBound = ABounds::getBoundsKeyStr(LowerBoundKey, ABI, D);
   // Assume that LowerBound is the same pointer type as this pointer this bound
   // acts on, so pointer arithmetic works as expected.
+  if (_3COpts.NewSyntax)
+    return "_Bounds(" + LowerBound + ", " + LowerBound + " + " +
+           ABounds::getBoundsKeyStr(LengthKey, ABI, D) + ")";
   return "bounds(" + LowerBound + ", " + LowerBound + " + " +
          ABounds::getBoundsKeyStr(LengthKey, ABI, D) + ")";
 }
 
 std::string
 CountBound::mkStringWithoutLowerBound(AVarBoundsInfo *ABI, clang::Decl *D) {
+  if (_3COpts.NewSyntax)
+    return "_Count(" + ABounds::getBoundsKeyStr(LengthKey, ABI, D) + ")";
   return "count(" + ABounds::getBoundsKeyStr(LengthKey, ABI, D) + ")";
 }
 
@@ -95,12 +101,17 @@ std::string CountPlusOneBound::mkStringWithLowerBound(AVarBoundsInfo *ABI,
                                                       clang::Decl *D) {
 
   std::string LowerBound = ABounds::getBoundsKeyStr(LowerBoundKey, ABI, D);
+  if (_3COpts.NewSyntax)
+    return "_Bounds(" + LowerBound + ", " + LowerBound + " + " +
+           ABounds::getBoundsKeyStr(LengthKey, ABI, D) + " + 1)";
   return "bounds(" + LowerBound + ", " + LowerBound + " + " +
          ABounds::getBoundsKeyStr(LengthKey, ABI, D) + " + 1)";
 }
 
 std::string CountPlusOneBound::mkStringWithoutLowerBound(AVarBoundsInfo *ABI,
                                                          clang::Decl *D) {
+  if (_3COpts.NewSyntax)
+    return "_Count(" + ABounds::getBoundsKeyStr(LengthKey, ABI, D) + " + 1)";
   return "count(" + ABounds::getBoundsKeyStr(LengthKey, ABI, D) + " + 1)";
 }
 
@@ -124,6 +135,8 @@ std::string ByteBound::mkStringWithLowerBound(AVarBoundsInfo *ABI,
 
 std::string ByteBound::mkStringWithoutLowerBound(AVarBoundsInfo *ABI,
                                                  clang::Decl *D) {
+  if (_3COpts.NewSyntax)
+    return "_Byte_count(" + ABounds::getBoundsKeyStr(LengthKey, ABI, D) + ")";
   return "byte_count(" + ABounds::getBoundsKeyStr(LengthKey, ABI, D) + ")";
 }
 

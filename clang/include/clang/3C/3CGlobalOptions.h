@@ -56,6 +56,7 @@ struct _3COptions {
   bool AllowMultiGenericParams;
   bool IgnoreDeclaredSingletonArrays;
   bool InferAssumeCastBounds;
+  bool NewSyntax;
   std::string KnownSafeCasts;
 #ifdef FIVE_C
   bool RemoveItypes;

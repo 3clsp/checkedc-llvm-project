@@ -477,10 +477,13 @@ public:
         for (auto Entry : Info.getTypeParamBindings(CE, Context))
           if (Entry.second.isConsistent()) {
             AllInconsistent = false;
+            PVConstraint *PVC = cast<PVConstraint>(Entry.second.getConstraint(
+                Info.getConstraints().getVariables()));
+            std::string OType = PVC->getTy();
             std::string TyStr = Entry.second.getConstraint(
                 Info.getConstraints().getVariables()
               )->mkString(Info.getConstraints(), MKSTRING_OPTS(
-                EmitName = false, EmitPointee = true));
+                EmitName = false, EmitPointee = true, OType = OType));
             if (TyStr.back() == ' ')
               TyStr.pop_back();
             TypeParamString += TyStr + ",";
@@ -493,8 +496,13 @@ public:
 
         // don't rewrite to malloc<void>(...), etc, just do malloc(...)
         if (!AllInconsistent) {
+          std::string TextToInsert = "";
+          if (_3COpts.NewSyntax)
+            TextToInsert = " _TyArgs(" + TypeParamString + ") ";
+          else
+            TextToInsert = "<" + TypeParamString + ">";
           SourceLocation TypeParamLoc = getTypeArgLocation(CE);
-          Writer.InsertTextAfter(TypeParamLoc, "<" + TypeParamString + ">");
+          Writer.InsertTextAfter(TypeParamLoc, TextToInsert);
         }
       }
     }

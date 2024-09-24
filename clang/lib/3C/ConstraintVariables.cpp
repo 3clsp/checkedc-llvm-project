@@ -741,7 +741,7 @@ PointerVariableConstraint::mkString(Constraints &CS,
                                     const MkStringOpts &Opts,
                                     bool *IsGeneric) const {
   UNPACK_OPTS(EmitName, ForItype, EmitPointee, UnmaskTypedef, UseName,
-              ForItypeBase);
+              OType, ForItypeBase);
 
   // This function has become pretty ad-hoc and has a number of known bugs: see
   // https://github.com/correctcomputation/checkedc-clang/issues/703. We hope to
@@ -798,6 +798,8 @@ PointerVariableConstraint::mkString(Constraints &CS,
     assert(InferredGenericIndex < 5
            && "Trying to use an unexpected type variable name");
     BaseTypeName = std::begin({"T","U","V","W","X"})[InferredGenericIndex];
+    // If the emitter type is generic, we should use that as the base type.
+    OType = BaseTypeName + "* ";
   }
 
   auto It = Vars.begin();
@@ -805,6 +807,8 @@ PointerVariableConstraint::mkString(Constraints &CS,
   // This is needed when inserting type arguments.
   if (EmitPointee)
     ++It;
+  
+  std::string PTypeN = "";
   // Iterate through the vars(), but if we have an internal typedef, then stop
   // once you reach the typedef's level.
   for (; It != Vars.end() && IMPLIES(TypedefLevelInfo.HasTypedef,
@@ -843,14 +847,18 @@ PointerVariableConstraint::mkString(Constraints &CS,
         EndStrs.push_front(" " + UseName);
       }
     }
-
     switch (K) {
     case Atom::A_Ptr:
       getQualString(TypeIdx, Ss);
 
       EmittedBase = false;
-      Ss << "_Ptr<";
-      EndStrs.push_front(">");
+      if (_3COpts.NewSyntax) {
+        EndStrs.push_front("_Single");
+        PTypeN = "_Single";
+      } else {
+        Ss << "_Ptr<";
+        EndStrs.push_front(">");
+      }
       break;
     case Atom::A_Arr:
       // If this is an array.
@@ -859,21 +867,35 @@ PointerVariableConstraint::mkString(Constraints &CS,
       // be [] instead of *, IF, the original type was an array.
       // And, if the original type was a sized array of size K.
       // we should substitute [K].
-      if (emitArraySize(ConstArrs, TypeIdx, K))
+      if (emitArraySize(ConstArrs, TypeIdx, K)) {
+        OType = BaseTypeName;
         break;
+      }
       EmittedBase = false;
-      Ss << "_Array_ptr<";
-      EndStrs.push_front(">");
+      if (_3COpts.NewSyntax) {
+        EndStrs.push_front("_Array");
+        PTypeN = "_Array";
+      } else {
+        Ss << "_Array_ptr<";
+        EndStrs.push_front(">");
+      }
       break;
     case Atom::A_NTArr:
       // If this is an NTArray.
       getQualString(TypeIdx, Ss);
-      if (emitArraySize(ConstArrs, TypeIdx, K))
+      if (emitArraySize(ConstArrs, TypeIdx, K)) {
+        OType = BaseTypeName;
         break;
+      }
 
       EmittedBase = false;
-      Ss << "_Nt_array_ptr<";
-      EndStrs.push_front(">");
+      if (_3COpts.NewSyntax) {
+        EndStrs.push_front("_Nt_array");
+        PTypeN = "_Nt_array";
+      } else {
+        Ss << "_Nt_array_ptr<";
+        EndStrs.push_front(">");
+      }
       break;
     // If there is no array in the original program, then we fall through to
     // the case where we write a pointer value.
@@ -921,14 +943,28 @@ PointerVariableConstraint::mkString(Constraints &CS,
                                              ForItypeBase = ForItypeBase));
       else
         Ss << FV->mkString(
-            CS, MKSTRING_OPTS(EmitName = false, ForItypeBase = ForItypeBase));
+            CS, MKSTRING_OPTS(EmitName = false,
+                              PType = PTypeN,
+                              ForItypeBase = ForItypeBase));
+      // If this is the new syntax, we will be putting the name and the pointer
+      // type inside the () of the function pointer type.
+      if (_3COpts.NewSyntax)
+        EndStrs.clear();
     } else if (TypedefLevelInfo.HasTypedef) {
       std::ostringstream Buf;
       getQualString(TypedefLevelInfo.TypedefLevel, Buf);
       auto Name = TypedefLevelInfo.TypedefName;
-      Ss << Buf.str() << Name;
+      // With the new syntax, we need to keep the * next to the type name
+      // since there is no <> around the type name.
+      if (_3COpts.NewSyntax)
+        Ss << Buf.str() << Name + "* ";
+      else
+        Ss << Buf.str() << Name;
     } else {
-      Ss << BaseTypeName;
+      if (_3COpts.NewSyntax)
+        Ss << OType;
+      else
+        Ss << BaseTypeName;
     }
   }
 
@@ -1653,7 +1689,7 @@ FunctionVariableConstraint::mkString(Constraints &CS,
                                      const MkStringOpts &Opts,
                                      bool *IsGeneric) const {
   UNPACK_OPTS(EmitName, ForItype, EmitPointee, UnmaskTypedef, UseName,
-              ForItypeBase);
+              ForItypeBase, PType);
   if (UseName.empty())
     UseName = Name;
   std::string Ret = ReturnVar.mkTypeStr(CS, false, "", ForItypeBase);
@@ -1669,6 +1705,8 @@ FunctionVariableConstraint::mkString(Constraints &CS,
     else
       Ret += "(" + UseName + ")";
   }
+  if (_3COpts.NewSyntax)
+    Ret += "(*" + PType + " " + UseName + ")";
   Ret = Ret + "(";
   std::vector<std::string> ParmStrs;
   for (const auto &I : this->ParamVars)
@@ -2174,9 +2212,10 @@ std::string FVComponentVariable::mkTypeStr(Constraints &CS, bool EmitName,
   // variable. Because the call is passed ForItypeBase, it will emit an
   // unchecked type instead of the solved type.
   if (ForItypeBase || hasCheckedSolution(CS) || (EmitName && !UseName.empty())) {
+    std::string OType = ExternalConstraint->getOriginalTy();
     Ret = ExternalConstraint->mkString(
         CS, MKSTRING_OPTS(EmitName = EmitName, UseName = UseName,
-                          ForItypeBase = ForItypeBase));
+                          OType = OType, ForItypeBase = ForItypeBase));
   } else {
     // if no need to generate type, try to use source
     if (!SourceDeclaration.empty())
@@ -2201,11 +2240,20 @@ std::string FVComponentVariable::mkTypeStr(Constraints &CS, bool EmitName,
 
 std::string
 FVComponentVariable::mkItypeStr(Constraints &CS, bool ForItypeBase) const {
-  if (!ForItypeBase && hasItypeSolution(CS))
+  if (!ForItypeBase && hasItypeSolution(CS)) {
+    if (_3COpts.NewSyntax) {
+      std::string OType = ExternalConstraint->getOriginalTy();
+      return "_Itype(" +
+             ExternalConstraint->mkString(
+                 CS, MKSTRING_OPTS(EmitName = false, ForItype = true,
+                                   OType = OType)) +
+             ")";
+    }
     return " : itype(" +
            ExternalConstraint->mkString(
                CS, MKSTRING_OPTS(EmitName = false, ForItype = true)) +
            ")";
+  }
   return "";
 }
 

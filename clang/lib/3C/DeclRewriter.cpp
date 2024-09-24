@@ -144,10 +144,13 @@ DeclRewriter::buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
       Type = Defn->getOriginalTypeWithName();
   }
 
-  std::string IType = " : itype(" +
-    Defn->mkString(Info.getConstraints(),
-                   MKSTRING_OPTS(EmitName = false, ForItype = true,
-                                 UnmaskTypedef = IsUncheckedTypedef), &IsGeneric) + ")";
+  std::string IType = " : itype(";
+  if (_3COpts.NewSyntax)
+    IType = " _Itype(";
+  
+  IType = IType + Defn->mkString(Info.getConstraints(),
+                  MKSTRING_OPTS(EmitName = false, ForItype = true, OType = Type,
+                                UnmaskTypedef = IsUncheckedTypedef), &IsGeneric) + ")";
   std::string BoundsString = ABR.getBoundsString(Defn, Decl, true, NeedsFreshLowerBound);
 
   if (IsGeneric) {
@@ -155,6 +158,11 @@ DeclRewriter::buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
     if (BoundsString.find("count") != std::string::npos) {
       BoundsString = BoundsString.replace(BoundsString.find("count"), 5, "byte_count");
     }
+    // If we are using the new syntax, replace _Count with _Byte_count
+    if (_3COpts.NewSyntax)
+      if (BoundsString.find("_Count") != std::string::npos) {
+        BoundsString = BoundsString.replace(BoundsString.find("_Count"), 6, "_Byte_count");
+      }
   }
 
   IType += BoundsString;
@@ -179,8 +187,11 @@ DeclRewriter::buildCheckedDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
       checkNeedsFreshLowerBound(Defn, UseName, Info, DeclName);
 
   bool IsGeneric = false;
+  std::string OType = Defn->getOriginalTy();
   std::string Type =
-    Defn->mkString(Info.getConstraints(), MKSTRING_OPTS(UseName = DeclName), &IsGeneric);
+    Defn->mkString(Info.getConstraints(),
+                   MKSTRING_OPTS(UseName = DeclName,OType = OType),
+                   &IsGeneric);
   std::string IType =
     ABR.getBoundsString(Defn, Decl, false, NeedsFreshLowerBound);
   std::string SDecl;

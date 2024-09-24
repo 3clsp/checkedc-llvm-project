@@ -76,7 +76,7 @@
 // https://developercommunity.visualstudio.com/t/-va-args-seems-to-be-trated-as-a-single-parameter/460154.
 #define _OP_MSVC_VA_ARGS_WORKAROUND(_x) _x
 
-#define _OP_GET_ARG7(_1, _2, _3, _4, _5, _6, _7, ...) _7
+#define _OP_GET_ARG9(_1, _2, _3, _4, _5, _6, _7, _8, _9, ...) _9
 // Precondition: The number of arguments is between 1 and 6 inclusive.
 //
 // The `_dummy` is because according to the C++ standard, at least one argument
@@ -84,7 +84,7 @@
 // (https://en.cppreference.com/w/cpp/preprocessor/replace).
 #define _OP_COUNT_ARGS(...)                                                    \
   _OP_MSVC_VA_ARGS_WORKAROUND(                                                 \
-      _OP_GET_ARG7(__VA_ARGS__, 6, 5, 4, 3, 2, 1, _dummy))
+      _OP_GET_ARG9(__VA_ARGS__, 8, 7, 6, 5, 4, 3, 2, 1, _dummy))
 
 // Each _i argument is expected to be of the form `field = expr`, so we generate
 // a statement of the form `_s.field = expr;` to set the struct field.
@@ -114,6 +114,23 @@
   _s._i4;                                                                      \
   _s._i5;                                                                      \
   _s._i6;
+#define _OP_ASSIGN_FIELDS_7(_i1, _i2, _i3, _i4, _i5, _i6, _i7)                 \
+  _s._i1;                                                                      \
+  _s._i2;                                                                      \
+  _s._i3;                                                                      \
+  _s._i4;                                                                      \
+  _s._i5;                                                                      \
+  _s._i6;                                                                      \
+  _s._i7;
+#define _OP_ASSIGN_FIELDS_8(_i1, _i2, _i3, _i4, _i5, _i6, _i7, _i8)            \
+  _s._i1;                                                                      \
+  _s._i2;                                                                      \
+  _s._i3;                                                                      \
+  _s._i4;                                                                      \
+  _s._i5;                                                                      \
+  _s._i6;                                                                      \
+  _s._i7;                                                                      \
+  _s._i8;
 #define _OP_ASSIGN_FIELDS(_count, ...)                                         \
   _OP_MSVC_VA_ARGS_WORKAROUND(_OP_ASSIGN_FIELDS_##_count(__VA_ARGS__))
 // In _OP_ASSIGN_FIELDS, ## takes precedence over the expansion of the _count
@@ -156,6 +173,19 @@
   _OP_UNPACK_OPT(_f2)                                                          \
   _OP_UNPACK_OPT(_f3)                                                          \
   _OP_UNPACK_OPT(_f4) _OP_UNPACK_OPT(_f5) _OP_UNPACK_OPT(_f6)
+#define _OP_UNPACK_OPTS_7(_f1, _f2, _f3, _f4, _f5, _f6, _f7)                   \
+  _OP_UNPACK_OPT(_f1)                                                          \
+  _OP_UNPACK_OPT(_f2)                                                          \
+  _OP_UNPACK_OPT(_f3)                                                          \
+  _OP_UNPACK_OPT(_f4)                                                          \
+  _OP_UNPACK_OPT(_f5) _OP_UNPACK_OPT(_f6) _OP_UNPACK_OPT(_f7)
+#define _OP_UNPACK_OPTS_8(_f1, _f2, _f3, _f4, _f5, _f6, _f7, _f8)              \
+  _OP_UNPACK_OPT(_f1)                                                          \
+  _OP_UNPACK_OPT(_f2)                                                          \
+  _OP_UNPACK_OPT(_f3)                                                          \
+  _OP_UNPACK_OPT(_f4)                                                          \
+  _OP_UNPACK_OPT(_f5)                                                          \
+  _OP_UNPACK_OPT(_f6) _OP_UNPACK_OPT(_f7) _OP_UNPACK_OPT(_f8)
 #define _OP_UNPACK_OPTS_IMPL(_count, ...)                                      \
   _OP_MSVC_VA_ARGS_WORKAROUND(_OP_UNPACK_OPTS_##_count(__VA_ARGS__))
 // Ditto the comment on _OP_ASSIGN_FIELDS_WRAP.

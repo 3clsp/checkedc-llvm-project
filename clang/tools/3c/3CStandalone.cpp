@@ -255,10 +255,14 @@ static cl::opt<bool> OptIgnoreDeclaredSingletonArrays(
              "bounds inference."),
     cl::init(false), cl::cat(_3CCategory));
 
-  
 static cl::opt<bool> OptInferAssumeCastBounds(
     "infer-assume-cast-bounds",
     cl::desc("Infer bounds for assume bounds cast."),
+    cl::init(false), cl::cat(_3CCategory));
+
+static cl::opt<bool> OptNewSyntax(
+    "new-syntax",
+    cl::desc("Use the new erasable Checked C syntax."),
     cl::init(false), cl::cat(_3CCategory));
 
 static cl::opt<bool> OptItypesForExtern(
@@ -402,6 +406,7 @@ int main(int argc, const char **argv) {
   CcOptions.AllowMultiGenericParams = OptAllowMultiGenericParams;
   CcOptions.IgnoreDeclaredSingletonArrays = OptIgnoreDeclaredSingletonArrays;
   CcOptions.InferAssumeCastBounds = OptInferAssumeCastBounds;
+  CcOptions.NewSyntax = OptNewSyntax;
   CcOptions.AllowUnwritableChanges = OptAllowUnwritableChanges;
   CcOptions.AllowRewriteFailures = OptAllowRewriteFailures;
   CcOptions.ItypesForExtern = OptItypesForExtern;

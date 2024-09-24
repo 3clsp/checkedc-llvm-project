@@ -290,8 +290,13 @@ CastPlacementVisitor::getCastString(ConstraintVariable *Dst,
                             MKSTRING_OPTS(EmitName = false, EmitPointee = true)) +
           ">";
     } else {
-      Type = Dst->mkString(Info.getConstraints(), MKSTRING_OPTS(EmitName = false));
+      std::string OType = Dst->getOriginalTy();
+      Type = Dst->mkString(Info.getConstraints(),
+                           MKSTRING_OPTS(EmitName = false,
+                           OType = OType));
     }
+    if (_3COpts.NewSyntax)
+      return std::make_pair("_Assume_bounds_cast_M(" + Type + ", ", Suffix);  
     return std::make_pair("_Assume_bounds_cast<" + Type + ">(", Suffix);
   }
   default:

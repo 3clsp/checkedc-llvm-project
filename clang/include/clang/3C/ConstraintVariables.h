@@ -56,6 +56,8 @@ struct MkStringOpts {
   bool EmitPointee = false;
   bool UnmaskTypedef = false;
   std::string UseName = "";
+  std::string OType = "";
+  std::string PType = "";
   bool ForItypeBase = false;
 };
 #define MKSTRING_OPTS(...) PACK_OPTS(MkStringOpts, __VA_ARGS__)
