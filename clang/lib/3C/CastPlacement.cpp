@@ -279,7 +279,7 @@ CastPlacementVisitor::getCastString(ConstraintVariable *Dst,
         AVarBoundsInfo &ABI = Info.getABoundsInfo();
         ABounds *B = ABI.getBounds(BK);
         if (B == nullptr)
-          Suffix = "";
+          Suffix = ")";
       }
     }
     // The destination's type may be generic, which would have an out-of-scope
