@@ -1106,6 +1106,9 @@ FunctionVariableConstraint::FunctionVariableConstraint(
       }
     }
 
+    if (FT->isVariadic())
+      IsVariadic = true;
+
     // Extract the types for the parameters to this function. If the parameter
     // has a bounds expression associated with it, substitute the type of that
     // bounds expression for the other type.
@@ -1719,7 +1722,10 @@ FunctionVariableConstraint::mkString(Constraints &CS,
               std::ostream_iterator<std::string>(Ss, ", "));
     Ss << ParmStrs.back();
 
-    Ret = Ret + Ss.str() + ")";
+    if (IsVariadic)
+      Ret = Ret + Ss.str() + ", ...)";
+    else
+      Ret = Ret + Ss.str() + ")";
   } else
     Ret = Ret + "void)";
   // Close the parenthesis required on the base for function pointer itypes.

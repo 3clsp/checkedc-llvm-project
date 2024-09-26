@@ -678,6 +678,11 @@ private:
   // Count of type parameters (originally from `_Itype_for_any(...)`).
   int TypeParams;
 
+  // Flag to indicate if the function is variadic. Since we don;t
+  // have the FunctionDecl at this point, we can't use the 
+  // already available functionHasVarArgs() method.
+  bool IsVariadic;
+
   // This is neede in cases where TypeParams are infered but we
   // couldn't make the function as generic due to the function
   // not having a body.
