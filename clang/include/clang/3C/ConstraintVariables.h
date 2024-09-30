@@ -274,6 +274,9 @@ struct InternalTypedefInfo {
   bool HasTypedef;
   int TypedefLevel;
   std::string TypedefName;
+  PointerVariableConstraint *TypedefPV;
+  PointerVariableConstraint *TypedefCheckedPV;
+  Decl *TypeDecl;
 };
 
 // Represents an individual constraint on a pointer variable.
@@ -422,6 +425,8 @@ private:
   // what is it's name?
   struct InternalTypedefInfo TypedefLevelInfo;
 
+  bool ReWritten = false;
+
   // Is this a pointer to void? Possibly with multiple levels of indirection.
   bool IsVoidPtr;
 
@@ -441,6 +446,8 @@ public:
   bool isTopAtomUnsizedArr() const;
   // Check if any of the pointers is either a sized or unsized arr.
   bool hasSomeSizedArr() const;
+  // Check if the Constraint is for a pointer.
+  bool isSomePointer() const;
 
   bool isTypedef(void) const;
   const ConstraintVariable *getTypedefVar() const;
@@ -448,6 +455,11 @@ public:
 
   // Return true if this constraint had an itype in the original source code.
   bool srcHasItype() const override { return SrcHasItype; }
+
+  // Useful when we want to know if a variable has been rewritten.
+  // Specifically useful in cases of multiple levels of Typedefs.
+  void setReWritten() { ReWritten = true; }
+  bool isReWritten() const { return ReWritten; }
 
   // Return the string representation of the itype for this constraint if an
   // itype was present in the original source code. Returns empty string
@@ -678,10 +690,10 @@ private:
   // Count of type parameters (originally from `_Itype_for_any(...)`).
   int TypeParams;
 
-  // Flag to indicate if the function is variadic. Since we don;t
+  // Flag to indicate if the function is variadic. Since we don't
   // have the FunctionDecl at this point, we can't use the 
   // already available functionHasVarArgs() method.
-  bool IsVariadic;
+  bool IsVariadic = false;
 
   // This is neede in cases where TypeParams are infered but we
   // couldn't make the function as generic due to the function

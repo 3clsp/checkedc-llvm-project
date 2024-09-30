@@ -157,8 +157,11 @@ PointerVariableConstraint::PointerVariableConstraint(Expr *E, ProgramInfo &I,
 // entrypoint is find().
 class TypedefLevelFinder : public RecursiveASTVisitor<TypedefLevelFinder> {
 public:
-  static struct InternalTypedefInfo find(const QualType &QT) {
-    TypedefLevelFinder TLF;
+  TypedefLevelFinder(const ASTContext &C, ProgramInfo &I)
+      : Context(C), Info(I) {}
+  static struct InternalTypedefInfo find(const QualType &QT, ProgramInfo &I,
+                                         const ASTContext &C) {
+    TypedefLevelFinder TLF(C, I);
     QualType ToSearch;
     // If the type is currently a typedef, desugar that.
     // This is so we can see if the type _contains_ a typedef.
@@ -170,13 +173,27 @@ public:
     // If we found a typedef then we need to have filled out the name field.
     assert(IMPLIES(TLF.HasTypedef, TLF.TDname != ""));
     struct InternalTypedefInfo Info = {TLF.HasTypedef, TLF.TypedefLevel,
-                                       TLF.TDname};
+                                       TLF.TDname, TLF.PVC,
+                                       TLF.PVChecked, TLF.TD};
     return Info;
   }
 
   bool VisitTypedefType(TypedefType *TT) {
     HasTypedef = true;
     auto *TDT = TT->getDecl();
+    TD = dyn_cast<TypedefDecl>(TDT);
+    
+    // Let's keep track of the ConstraintVariable for this typedef.
+    auto PSL = PersistentSourceLoc::mkPSL(TDT, Context);
+    const auto &CV = Info.lookupTypedef(PSL);
+    if (CV.hasValue())
+      PVC = dyn_cast<PointerVariableConstraint>(&CV.getValue());
+    else
+      PVC = nullptr;
+
+    // If we need the Checked Type of the typedef, we can use this.
+    PVChecked = new PointerVariableConstraint(TD, Info, Context);
+    
     TDname = TDT->getNameAsString();
     return false;
   }
@@ -194,6 +211,11 @@ public:
 private:
   int TypedefLevel = 0;
   std::string TDname = "";
+  const ASTContext &Context;
+  ProgramInfo &Info;
+  PVConstraint *PVC;
+  PVConstraint *PVChecked;
+  TypedefDecl *TD;
   bool HasTypedef = false;
 };
 
@@ -301,7 +323,7 @@ PointerVariableConstraint::PointerVariableConstraint(
   // input type). It will be consumed to create atoms, so any code that needs
   // to be coordinated with the atoms should access it here first.
 
-  TypedefLevelInfo = TypedefLevelFinder::find(QTy);
+  TypedefLevelInfo = TypedefLevelFinder::find(QTy, I, C);
 
   if (ForceGenericIndex >= 0) {
     SourceGenericIndex = ForceGenericIndex;
@@ -954,6 +976,17 @@ PointerVariableConstraint::mkString(Constraints &CS,
       std::ostringstream Buf;
       getQualString(TypedefLevelInfo.TypedefLevel, Buf);
       auto Name = TypedefLevelInfo.TypedefName;
+
+      // Check if the internal typedef was rewritten. This means that the
+      // typedef is likely a checkded type. If it is not, then we use the
+      // internal typedefs actual type for rewriting. This is only needed
+      // for itypes.
+      if (ForItype && !TypedefLevelInfo.TypedefPV->isReWritten()
+          && TypedefLevelInfo.TypedefPV->isSomePointer())
+        Name = TypedefLevelInfo.TypedefCheckedPV->mkString(CS, MKSTRING_OPTS(
+                    EmitName = EmitName, ForItype = ForItype, OType = OType,
+                    UnmaskTypedef = UnmaskTypedef));
+
       // With the new syntax, we need to keep the * next to the type name
       // since there is no <> around the type name.
       if (_3COpts.NewSyntax)
@@ -1549,6 +1582,15 @@ bool PointerVariableConstraint::hasSomeSizedArr() const {
     }
   }
   return false;
+}
+
+bool PointerVariableConstraint::isSomePointer() const {
+  for (const auto &A : ArrSizes) {
+    if (A.second.first == O_SizedArray || A.second.second == O_UnSizedArray
+        || A.second.first == O_Pointer) {
+      return true;
+    }
+  }
 }
 
 bool PointerVariableConstraint::solutionEqualTo(Constraints &CS,

@@ -247,6 +247,11 @@ void DeclRewriter::rewriteDecls(ASTContext &Context, ProgramInfo &Info,
                              MKSTRING_OPTS(UnmaskTypedef = true));
             RewriteThese.insert(
                 std::make_pair(TD, new MultiDeclMemberReplacement(TD, NewTy, {})));
+            // Set the typedef as rewritten.
+            PVConstraint *PVC = dyn_cast<PVConstraint>(&O.getValue());
+            // We can ignore FV's for now.
+            if (PVC)
+              PVC->setReWritten();
           }
         }
       }
