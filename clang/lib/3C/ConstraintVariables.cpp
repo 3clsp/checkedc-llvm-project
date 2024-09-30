@@ -1591,6 +1591,7 @@ bool PointerVariableConstraint::isSomePointer() const {
       return true;
     }
   }
+  return false;
 }
 
 bool PointerVariableConstraint::solutionEqualTo(Constraints &CS,
