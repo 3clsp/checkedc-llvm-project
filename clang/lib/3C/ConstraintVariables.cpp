@@ -977,16 +977,20 @@ PointerVariableConstraint::mkString(Constraints &CS,
       getQualString(TypedefLevelInfo.TypedefLevel, Buf);
       auto Name = TypedefLevelInfo.TypedefName;
 
-      // Check if the internal typedef was rewritten. This means that the
-      // typedef is likely a checkded type. If it is not, then we use the
-      // internal typedefs actual type for rewriting. This is only needed
-      // for itypes.
-      if (ForItype && !TypedefLevelInfo.TypedefPV->isReWritten()
-          && TypedefLevelInfo.TypedefPV->isSomePointer())
-        Name = TypedefLevelInfo.TypedefCheckedPV->mkString(CS, MKSTRING_OPTS(
-                    EmitName = EmitName, ForItype = ForItype, OType = OType,
-                    UnmaskTypedef = UnmaskTypedef));
-
+      // Known typedef value for EDK II
+      if (Name == "__builtin_ms_va_list")
+        Name = "_Ptr<char>";
+      else {
+        // Check if the internal typedef was rewritten. This means that the
+        // typedef is likely a checkded type. If it is not, then we use the
+        // internal typedefs actual type for rewriting. This is only needed
+        // for itypes.
+        if (ForItype && !TypedefLevelInfo.TypedefPV->isReWritten()
+            && TypedefLevelInfo.TypedefPV->isSomePointer())
+          Name = TypedefLevelInfo.TypedefCheckedPV->mkString(CS, MKSTRING_OPTS(
+                      EmitName = EmitName, ForItype = ForItype, OType = OType,
+                      UnmaskTypedef = UnmaskTypedef));
+      }
       // With the new syntax, we need to keep the * next to the type name
       // since there is no <> around the type name.
       if (_3COpts.NewSyntax)
