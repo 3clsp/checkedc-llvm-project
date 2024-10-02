@@ -494,6 +494,16 @@ public:
           }
         TypeParamString.pop_back();
 
+        // Count the number of type arguments we generated.
+        int NumTypeArgs = std::count(TypeParamString.begin(),
+                                     TypeParamString.end(), ',') + 1;
+        // If the number is not matching with the number of generic parameters,
+        // then we need to add void as the first type argument. This case happens
+        // when the function has a generic return type but the callsite does not
+        // assign the return value to any variable.
+        if (NumTypeArgs != Info.getFuncConstraint(FD, Context)->getGenericParams())
+          TypeParamString = "void," + TypeParamString;
+
         // don't rewrite to malloc<void>(...), etc, just do malloc(...)
         if (!AllInconsistent) {
           std::string TextToInsert = "";
