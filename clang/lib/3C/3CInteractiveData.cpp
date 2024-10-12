@@ -123,7 +123,7 @@ void ConstraintsInfo::printRCMap(llvm::raw_ostream &O,
         continue;
       if (AddComma2)
         O << ",\n";
-      O << "\"" << R << "\"";
+      O << "\"" << Name << "\"";
       AddComma2 = true;
     }
     O << "]}";
