@@ -829,8 +829,17 @@ PointerVariableConstraint::mkString(Constraints &CS,
   // This is needed when inserting type arguments.
   if (EmitPointee)
     ++It;
+
+  // Remove all *s from OType
+  if (!OType.empty()) {
+    std::string::size_type Pos = 0;
+    while ((Pos = OType.find("*", Pos)) != std::string::npos) {
+      OType.replace(Pos, 1, "");
+    }
+  }
   
   std::string PTypeN = "";
+  std::string P = " *";
   // Iterate through the vars(), but if we have an internal typedef, then stop
   // once you reach the typedef's level.
   for (; It != Vars.end() && IMPLIES(TypedefLevelInfo.HasTypedef,
@@ -876,6 +885,7 @@ PointerVariableConstraint::mkString(Constraints &CS,
       EmittedBase = false;
       if (_3COpts.NewSyntax) {
         EndStrs.push_front("_Single");
+        EndStrs.push_front(P);
         PTypeN = "_Single";
       } else {
         Ss << "_Ptr<";
@@ -896,6 +906,7 @@ PointerVariableConstraint::mkString(Constraints &CS,
       EmittedBase = false;
       if (_3COpts.NewSyntax) {
         EndStrs.push_front("_Array");
+        EndStrs.push_front(P);
         PTypeN = "_Array";
       } else {
         Ss << "_Array_ptr<";
@@ -913,6 +924,7 @@ PointerVariableConstraint::mkString(Constraints &CS,
       EmittedBase = false;
       if (_3COpts.NewSyntax) {
         EndStrs.push_front("_Nt_array");
+        EndStrs.push_front(P);
         PTypeN = "_Nt_array";
       } else {
         Ss << "_Nt_array_ptr<";
@@ -998,8 +1010,11 @@ PointerVariableConstraint::mkString(Constraints &CS,
       else
         Ss << Buf.str() << Name;
     } else {
-      if (_3COpts.NewSyntax)
+      if (_3COpts.NewSyntax) {
+        if (OType == "")
+          OType = BaseTypeName;
         Ss << OType;
+      }
       else
         Ss << BaseTypeName;
     }
