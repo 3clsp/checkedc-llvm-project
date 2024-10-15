@@ -872,7 +872,8 @@ PointerVariableConstraint::mkString(Constraints &CS,
     // a checked array level), we need to transfer any pending array levels and
     // emit the name (if applicable).
     if (K != Atom::A_Wild && ArrSizes.at(TypeIdx).first != O_SizedArray) {
-      addArrayAnnotations(ConstArrs, EndStrs);
+      if (!_3COpts.NewSyntax)
+        addArrayAnnotations(ConstArrs, EndStrs);
       if (!EmittedName) {
         if (!_3COpts.NewSyntax) {
           EmittedName = true;
