@@ -1025,17 +1025,28 @@ PointerVariableConstraint::mkString(Constraints &CS,
     }
   }
 
-  // No space after itype.
-  if (!EmittedName) {
-    if (!StringRef(Ss.str()).endswith("*"))
-      Ss << " ";
-    Ss << UseName;
+  // With the new syntax, the name comes at the end.
+  if (!_3COpts.NewSyntax) {
+    // No space after itype.
+    if (!EmittedName) {
+      if (!StringRef(Ss.str()).endswith("*"))
+        Ss << " ";
+      Ss << UseName;
+    }
   }
 
   // Add closing elements to type
   addArrayAnnotations(ConstArrs, EndStrs);
   for (std::string Str : EndStrs) {
     Ss << Str;
+  }
+
+  if (_3COpts.NewSyntax) {
+    if (!EmittedName) {
+      if (!StringRef(Ss.str()).endswith("*"))
+        Ss << " ";
+      Ss << UseName;
+    }
   }
 
   if (IsReturn && !ForItype && !StringRef(Ss.str()).endswith("*"))
