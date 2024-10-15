@@ -874,8 +874,10 @@ PointerVariableConstraint::mkString(Constraints &CS,
     if (K != Atom::A_Wild && ArrSizes.at(TypeIdx).first != O_SizedArray) {
       addArrayAnnotations(ConstArrs, EndStrs);
       if (!EmittedName) {
-        EmittedName = true;
-        EndStrs.push_front(" " + UseName);
+        if (!_3COpts.NewSyntax) {
+          EmittedName = true;
+          EndStrs.push_front(" " + UseName);
+        }
       }
     }
     switch (K) {
@@ -974,7 +976,8 @@ PointerVariableConstraint::mkString(Constraints &CS,
       bool EmitFVName = !FptrInner.str().empty();
       if (EmitFVName)
         Ss << FV->mkString(CS, MKSTRING_OPTS(UseName = FptrInner.str(),
-                                             ForItypeBase = ForItypeBase));
+                                             ForItypeBase = ForItypeBase,
+                                             PType = PTypeN));
       else
         Ss << FV->mkString(
             CS, MKSTRING_OPTS(EmitName = false,
@@ -1761,19 +1764,28 @@ FunctionVariableConstraint::mkString(Constraints &CS,
     UseName = Name;
   std::string Ret = ReturnVar.mkTypeStr(CS, false, "", ForItypeBase);
   std::string Itype = ReturnVar.mkItypeStr(CS, ForItypeBase);
+  std::string P = "*";
   // When a function pointer type is the base for an itype, the name and
   // parameter list need to be surrounded in an extra set of parenthesis.
-  if (ForItypeBase)
+  if (ForItypeBase) {
     Ret += "(";
+    P = "";
+    PType = "";
+  }
   if (EmitName) {
     if (UnmaskTypedef)
       // This is done to rewrite the typedef of a function proto
       Ret += UseName;
-    else
-      Ret += "(" + UseName + ")";
+    else {
+      if (_3COpts.NewSyntax)
+        Ret += "(" + P + PType + (ForItypeBase ? "" : " ") + UseName + ")";
+      else
+        Ret += "(" + UseName + ")";
+    }
+  } else {
+    if (_3COpts.NewSyntax)
+      Ret += "(*" + PType + ")";
   }
-  if (_3COpts.NewSyntax)
-    Ret += "(*" + PType + " " + UseName + ")";
   Ret = Ret + "(";
   std::vector<std::string> ParmStrs;
   for (const auto &I : this->ParamVars)
