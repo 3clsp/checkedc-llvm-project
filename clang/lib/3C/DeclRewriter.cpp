@@ -143,13 +143,13 @@ DeclRewriter::buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
     else
       Type = Defn->getOriginalTypeWithName();
   }
-
+  std::string OType = Defn->getOriginalTy();
   std::string IType = " : itype(";
   if (_3COpts.NewSyntax)
     IType = " _Itype(";
   
   IType = IType + Defn->mkString(Info.getConstraints(),
-                  MKSTRING_OPTS(EmitName = false, ForItype = true, OType = Type,
+                  MKSTRING_OPTS(EmitName = false, ForItype = true, OType = OType,
                                 UnmaskTypedef = IsUncheckedTypedef), &IsGeneric) + ")";
   std::string BoundsString = ABR.getBoundsString(Defn, Decl, true, NeedsFreshLowerBound);
 

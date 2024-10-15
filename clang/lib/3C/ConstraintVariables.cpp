@@ -989,9 +989,16 @@ PointerVariableConstraint::mkString(Constraints &CS,
       getQualString(TypedefLevelInfo.TypedefLevel, Buf);
       auto Name = TypedefLevelInfo.TypedefName;
 
-      // Known typedef value for EDK II
-      if (Name == "__builtin_ms_va_list")
-        Name = "_Ptr<char>";
+      // Known typedef value for EDK II. This is a hack for now.
+      if (Name == "__builtin_ms_va_list") {
+        Name = "char *";
+        if (ForItype) {
+          if (_3COpts.NewSyntax)
+            Name = BaseTypeName + " * _Single";
+          else
+            Name = "_Ptr<" + BaseTypeName + ">";
+        }
+      }
       else {
         // Check if the internal typedef was rewritten. This means that the
         // typedef is likely a checkded type. If it is not, then we use the
@@ -1005,15 +1012,10 @@ PointerVariableConstraint::mkString(Constraints &CS,
       }
       // With the new syntax, we need to keep the * next to the type name
       // since there is no <> around the type name.
-      if (_3COpts.NewSyntax)
-        Ss << Buf.str() << Name + "* ";
-      else
-        Ss << Buf.str() << Name;
+      Ss << Buf.str() << Name;
     } else {
       if (_3COpts.NewSyntax) {
-        if (OType == "")
-          OType = BaseTypeName;
-        Ss << OType;
+        Ss << BaseTypeName;
       }
       else
         Ss << BaseTypeName;

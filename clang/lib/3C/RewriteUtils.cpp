@@ -649,6 +649,9 @@ std::string ArrayBoundsRewriter::getBoundsString(const PVConstraint *PV,
   std::string BString = "";
   // For itype we do not want to add a second ":".
   std::string Pfix = Isitype ? " " : " : ";
+  // If we are using the new syntax, we don't need the prefix.
+  if (_3COpts.NewSyntax)
+    Pfix = " ";
 
   if (ValidBKey && !PV->hasSomeSizedArr()) {
     ABounds *ArrB = ABInfo.getBounds(DK);
