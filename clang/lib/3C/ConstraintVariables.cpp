@@ -1033,19 +1033,26 @@ PointerVariableConstraint::mkString(Constraints &CS,
         Ss << " ";
       Ss << UseName;
     }
-  }
-
-  // Add closing elements to type
-  addArrayAnnotations(ConstArrs, EndStrs);
-  for (std::string Str : EndStrs) {
-    Ss << Str;
+    // Add closing elements to type
+    addArrayAnnotations(ConstArrs, EndStrs);
+    for (std::string Str : EndStrs) {
+      Ss << Str;
+    }
   }
 
   if (_3COpts.NewSyntax) {
+    for (std::string Str : EndStrs) {
+      Ss << Str;
+    }
     if (!EmittedName) {
       if (!StringRef(Ss.str()).endswith("*"))
         Ss << " ";
       Ss << UseName;
+    }
+    EndStrs.clear();
+    addArrayAnnotations(ConstArrs, EndStrs);
+    for (std::string Str : EndStrs) {
+      Ss << Str;
     }
   }
 
