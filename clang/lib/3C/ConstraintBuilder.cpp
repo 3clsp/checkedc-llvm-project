@@ -51,6 +51,8 @@ public:
     QualType SrcT = C->getSubExpr()->getType();
     QualType DstT = C->getType();
     QualType RType = C->getType();
+    QualType CastType;
+    bool WasOriginallyPointer = false;
 
     // Only used for keeping track of all casts. So no need for 
     // below checks?
@@ -68,7 +70,21 @@ public:
         RType = TT->desugar();
       }
     }
-    Info.addCastInformation(TempCVs, RType.getAsString());
+    CastType = RType;
+    // If the type is a pointer, get the pointee type.
+    if (RType->isPointerType()) {
+      WasOriginallyPointer = true;
+      CastType = RType->getPointeeType();
+    }
+    // Till the CastType is a typedef, keep on desugaring it.
+    while (const TypedefType *CTT = CastType->getAs<TypedefType>())
+      CastType = CTT->desugar();
+
+    // If the type was a pointer, make it a pointer type again.
+    if (WasOriginallyPointer)
+      CastType = Context->getPointerType(CastType);
+
+    Info.addCastInformation(TempCVs, CastType.getAsString());
 
     if (!CB.isCastofGeneric(C) && !isCastSafe(DstT, SrcT)
       && !Info.hasPersistentConstraints(C, Context)) {
