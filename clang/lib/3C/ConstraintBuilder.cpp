@@ -45,6 +45,37 @@ public:
     return true;
   }
 
+  bool VisitImplicitCastExpr(ImplicitCastExpr *ICE) {
+    Expr *SubExpr = ICE->getSubExpr()->IgnoreParenImpCasts();
+    QualType DstT = SubExpr->getType();
+    QualType SrcT = ICE->getType();
+    QualType CastType = SrcT;
+
+    // If the SrcT and DstT are the same,
+    // then we don't need to do anything.
+    if (SrcT.getCanonicalType() == DstT.getCanonicalType())
+      return true;
+
+    // Check if the dest is a member expression.
+    if (isa<MemberExpr>(SubExpr)) {
+      // If CastType is a pointer, get the pointee type.
+      if (SrcT->isPointerType())
+        CastType = SrcT->getPointeeType();
+
+      // Till the CastType is a typedef, keep on desugaring it.
+      while (const TypedefType *CTT = CastType->getAs<TypedefType>())
+        CastType = CTT->desugar();
+
+      // If the type was a pointer, make it a pointer type again.
+      if (SrcT->isPointerType())
+        CastType = Context->getPointerType(CastType);
+
+      auto CVs = CB.getExprConstraintVarsSet(SubExpr);
+      Info.addCastInformation(CVs, CastType.getAsString());
+    }
+    return true;
+  }
+
   // (T)e
   bool VisitCStyleCastExpr(CStyleCastExpr *C) {
     // Is cast compatible with LHS type?
@@ -72,16 +103,15 @@ public:
     }
     CastType = RType;
     // If the type is a pointer, get the pointee type.
-    if (RType->isPointerType()) {
-      WasOriginallyPointer = true;
+    if (RType->isPointerType())
       CastType = RType->getPointeeType();
-    }
+    
     // Till the CastType is a typedef, keep on desugaring it.
     while (const TypedefType *CTT = CastType->getAs<TypedefType>())
       CastType = CTT->desugar();
 
     // If the type was a pointer, make it a pointer type again.
-    if (WasOriginallyPointer)
+    if (RType->isPointerType())
       CastType = Context->getPointerType(CastType);
 
     Info.addCastInformation(TempCVs, CastType.getAsString());
