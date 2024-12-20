@@ -96,6 +96,9 @@ const clang::Type *getNextTy(const clang::Type *Ty);
 
 clang::FunctionDecl *getDeclaration(clang::FunctionDecl *FD);
 
+clang::QualType getTypedefDesugaredType(clang::ASTContext *Ctx,
+                                        clang::QualType QT);
+
 clang::FunctionDecl *getDefinition(clang::FunctionDecl *FD);
 
 clang::CheckedPointerKind

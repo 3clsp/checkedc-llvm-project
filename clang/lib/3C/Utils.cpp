@@ -45,6 +45,23 @@ FunctionDecl *getDeclaration(FunctionDecl *FD) {
   return nullptr;
 }
 
+QualType getTypedefDesugaredType(ASTContext *Ctx, QualType QT) {
+  QualType CastType = QT;
+  // If the type is a pointer, get the pointee type.
+    if (QT->isPointerType())
+      CastType = QT->getPointeeType();
+    
+    // Till the CastType is a typedef, keep on desugaring it.
+    while (const TypedefType *CTT = CastType->getAs<TypedefType>())
+      CastType = CTT->desugar();
+
+    // If the type was a pointer, make it a pointer type again.
+    if (QT->isPointerType())
+      CastType = Ctx->getPointerType(CastType);
+    
+    return CastType;
+}
+
 // Walk the list of declarations and find a declaration accompanied by
 // a definition and a function body.
 FunctionDecl *getDefinition(FunctionDecl *FD) {

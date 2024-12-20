@@ -58,17 +58,8 @@ public:
 
     // Check if the dest is a member expression.
     if (isa<MemberExpr>(SubExpr)) {
-      // If CastType is a pointer, get the pointee type.
-      if (SrcT->isPointerType())
-        CastType = SrcT->getPointeeType();
-
-      // Till the CastType is a typedef, keep on desugaring it.
-      while (const TypedefType *CTT = CastType->getAs<TypedefType>())
-        CastType = CTT->desugar();
-
-      // If the type was a pointer, make it a pointer type again.
-      if (SrcT->isPointerType())
-        CastType = Context->getPointerType(CastType);
+      // Desugar all levels of typedefs.
+      CastType = getTypedefDesugaredType(Context, SrcT); 
 
       auto CVs = CB.getExprConstraintVarsSet(SubExpr);
       Info.addCastInformation(CVs, CastType.getAsString());
@@ -83,7 +74,6 @@ public:
     QualType DstT = C->getType();
     QualType RType = C->getType();
     QualType CastType;
-    bool WasOriginallyPointer = false;
 
     // Only used for keeping track of all casts. So no need for 
     // below checks?
@@ -101,18 +91,8 @@ public:
         RType = TT->desugar();
       }
     }
-    CastType = RType;
-    // If the type is a pointer, get the pointee type.
-    if (RType->isPointerType())
-      CastType = RType->getPointeeType();
-    
-    // Till the CastType is a typedef, keep on desugaring it.
-    while (const TypedefType *CTT = CastType->getAs<TypedefType>())
-      CastType = CTT->desugar();
-
-    // If the type was a pointer, make it a pointer type again.
-    if (RType->isPointerType())
-      CastType = Context->getPointerType(CastType);
+    // Desugar all levels of typedefs.
+    CastType = getTypedefDesugaredType(Context, DstT);
 
     Info.addCastInformation(TempCVs, CastType.getAsString());
 
