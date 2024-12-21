@@ -47,8 +47,8 @@ public:
 
   bool VisitImplicitCastExpr(ImplicitCastExpr *ICE) {
     Expr *SubExpr = ICE->getSubExpr()->IgnoreParenImpCasts();
-    QualType DstT = SubExpr->getType();
-    QualType SrcT = ICE->getType();
+    QualType SrcT = SubExpr->getType();
+    QualType DstT = ICE->getType();
     QualType CastType = SrcT;
 
     // If the SrcT and DstT are the same,
@@ -56,14 +56,23 @@ public:
     if (SrcT.getCanonicalType() == DstT.getCanonicalType())
       return true;
 
-    // Check if the dest is a member expression.
-    if (isa<MemberExpr>(SubExpr)) {
-      // Desugar all levels of typedefs.
-      CastType = getTypedefDesugaredType(Context, SrcT); 
+    CastType = getTypedefDesugaredType(Context, SrcT);
 
-      auto CVs = CB.getExprConstraintVarsSet(SubExpr);
-      Info.addCastInformation(CVs, CastType.getAsString());
+    auto Parents = Context->getParents(*ICE);
+    if (!Parents.empty()) {
+        for (auto Parent: Parents) {
+            // If parent is a BinaryOperator, then check if LHS
+            // is a MemberExpr.
+            if (auto *BO = Parent.get<BinaryOperator>()) {
+                if (isa<MemberExpr>(BO->getLHS())) {
+                    auto CVs = CB.getExprConstraintVarsSet(BO->getLHS());
+                    Info.addCastInformation(CVs, CastType.getAsString());
+                    break;
+                }
+            }
+        }
     }
+
     return true;
   }
 
