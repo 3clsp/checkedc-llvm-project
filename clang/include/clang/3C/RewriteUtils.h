@@ -229,7 +229,7 @@ public:
   explicit DeclToJsonConsumer(ProgramInfo &I, std::string &OutputFile) :
     Info(I), OutputF(OutputFile) {}
 
-  virtual void HandleTranslationUnit(ASTContext &C, Parallel &ThreadData);
+  virtual void HandleTranslationUnit(ASTContext &C);
 
 private:
   ProgramInfo &Info;

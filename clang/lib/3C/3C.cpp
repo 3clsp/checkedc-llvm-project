@@ -21,8 +21,6 @@
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "llvm/Support/TargetSelect.h"
 
-#include <thread>
-
 using namespace clang::driver;
 using namespace clang::tooling;
 using namespace clang;
@@ -755,30 +753,10 @@ _3CInterface::WriteArrayConversionAndBoundsToJson(
   const std::string &JsonFile) {
   std::lock_guard<std::mutex> Lock(InterfaceMutex);
 
-  std::unordered_map<int, Parallel> Parallels;
-  std::vector<std::thread> Threads;
-  int ThreadNum = 0;
-
   // Rewrite the input files
   DeclToJsonConsumer DC = DeclToJsonConsumer(*GlobalProgramInfo, OutputPostfix);
-  GlobalProgramInfo->setPersisted(false);
-  for (auto &TU : ASTs) {
-    ASTContext &TUContext = TU->getASTContext();
-    llvm::outs() << "Starting thread for TU " << ThreadNum << "\n";
-    Threads.emplace_back([ThreadNum, &Parallels, &DC, &TUContext]() {
-      Parallel P;
-      DC.HandleTranslationUnit(TUContext, P);
-      Parallels[ThreadNum] = std::move(P);
-      llvm::outs() << "Finished thread for TU " << ThreadNum << "\n";
-    });
-    ThreadNum++;
-  }
-
-  for (auto &T : Threads) {
-    T.join();
-  }
-
-  GlobalProgramInfo->bigDataMerger(Parallels);
+  for (auto &TU : ASTs)
+    DC.HandleTranslationUnit(TU->getASTContext());
 
   std::error_code Ec;
   llvm::raw_fd_ostream OutputJson(JsonFile, Ec);
