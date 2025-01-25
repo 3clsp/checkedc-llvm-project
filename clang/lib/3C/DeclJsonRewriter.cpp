@@ -28,9 +28,8 @@ std::set<std::string> isHavingCast(ProgramInfo &I, ConstraintVariable &CV) {
 class DeclJsonVisitor : public RecursiveASTVisitor<DeclJsonVisitor> {
 public:
   explicit DeclJsonVisitor(ASTContext *Context,
-                           ProgramInfo &I,
-                           Parallel &ThreadData)
-    : Context(Context), Info(I), LocalData(ThreadData) {}
+                           ProgramInfo &I)
+    : Context(Context), Info(I) { }
 
   bool VisitFunctionDecl(FunctionDecl *D) {
     if (D->hasBody() && !D->getNameAsString().empty() && D->isThisDeclarationADefinition()) {
@@ -43,8 +42,8 @@ public:
         return true;
       }
       // Did we already process this function?
-      if (LocalData.FnArrPtrs.find(FuncK) == LocalData.FnArrPtrs.end() &&
-        LocalData.FnNtArrPtrs.find(FuncK) == LocalData.FnNtArrPtrs.end()) {
+      if (Info.FnArrPtrs.find(FuncK) == Info.FnArrPtrs.end() &&
+        Info.FnNtArrPtrs.find(FuncK) == Info.FnNtArrPtrs.end()) {
         auto &ABInfo = Info.getABoundsInfo();
         // No!
         unsigned i = 0;
@@ -114,16 +113,16 @@ public:
               auto BndsTup = std::make_tuple(BVar, bidx, BVarN);
               if (!NtArrInds.empty() && !ArrInds.empty()) {
                 auto ToInNtArr = std::make_tuple(i, BaseTypeStr, Casts, NtArrInds, BndsTup);
-                LocalData.FnNtArrPtrs[FuncK].insert(ToInNtArr);
+                Info.FnNtArrPtrs[FuncK].insert(ToInNtArr);
                 auto ToInArr = std::make_tuple(i, BaseTypeStr, Casts, ArrInds, BndsTup);
-                LocalData.FnArrPtrs[FuncK].insert(ToInArr);
+                Info.FnArrPtrs[FuncK].insert(ToInArr);
               }
               else if (!NtArrInds.empty()) {
                 auto ToIn = std::make_tuple(i, BaseTypeStr, Casts, NtArrInds, BndsTup);
-                LocalData.FnNtArrPtrs[FuncK].insert(ToIn);
+                Info.FnNtArrPtrs[FuncK].insert(ToIn);
               } else {
                 auto ToIn = std::make_tuple(i, BaseTypeStr, Casts, ArrInds, BndsTup);
-                LocalData.FnArrPtrs[FuncK].insert(ToIn);
+                Info.FnArrPtrs[FuncK].insert(ToIn);
               }
 
             }
@@ -180,8 +179,8 @@ public:
         }
         auto &ABInfo = Info.getABoundsInfo();
         if (FE && FE->isValid()
-            && LocalData.StArrPtrs.find(StName) == LocalData.StArrPtrs.end()
-            && LocalData.StNtArrPtrs.find(StName) == LocalData.StNtArrPtrs.end()) {
+            && Info.StArrPtrs.find(StName) == Info.StArrPtrs.end()
+            && Info.StNtArrPtrs.find(StName) == Info.StNtArrPtrs.end()) {
           unsigned i = 0;
           auto &EnvMap = Info.getConstraints().getVariables();
           for (auto *const D : Definition->fields()) {
@@ -239,16 +238,16 @@ public:
                 auto BndsTup = std::make_tuple(BVar, bidx, BVarN);
                 if (!NtArrInds.empty() && !ArrInds.empty()) {
                   auto ToInNtArr = std::make_tuple(i, BaseTypeStr, Casts, NtArrInds, BndsTup);
-                  LocalData.StNtArrPtrs[StName].insert(ToInNtArr);
+                  Info.StNtArrPtrs[StName].insert(ToInNtArr);
                   auto ToInArr = std::make_tuple(i, BaseTypeStr, Casts, ArrInds, BndsTup);
-                  LocalData.StArrPtrs[StName].insert(ToInArr);
+                  Info.StArrPtrs[StName].insert(ToInArr);
                 }
                 else if (!NtArrInds.empty()) {
                   auto ToIn = std::make_tuple(i, BaseTypeStr, Casts, NtArrInds, BndsTup);
-                  LocalData.StNtArrPtrs[StName].insert(ToIn);
+                  Info.StNtArrPtrs[StName].insert(ToIn);
                 } else {
                   auto ToIn = std::make_tuple(i, BaseTypeStr, Casts, ArrInds, BndsTup);
-                  LocalData.StArrPtrs[StName].insert(ToIn);
+                  Info.StArrPtrs[StName].insert(ToIn);
                 }
               }
             }
@@ -267,8 +266,8 @@ public:
     if (G->hasGlobalStorage() &&
         isPtrOrArrayType(G->getType())) {
       std::string VName = G->getNameAsString();
-      if (LocalData.GlobalArrPtrs.find(VName) == LocalData.GlobalArrPtrs.end() &&
-        LocalData.GlobalNtArrPtrs.find(VName) == LocalData.GlobalNtArrPtrs.end()) {
+      if (Info.GlobalArrPtrs.find(VName) == Info.GlobalArrPtrs.end() &&
+        Info.GlobalNtArrPtrs.find(VName) == Info.GlobalNtArrPtrs.end()) {
         auto COpt = Info.getVariable(G, Context);
         std::string BaseTypeStr = G->getType().getAsString();
         std::set<unsigned> ArrInds;
@@ -312,16 +311,16 @@ public:
             auto BndsTup = std::make_tuple(BVar, bidx, BVarN);
             if (!NtArrInds.empty() && !ArrInds.empty()) {
               auto ToInNtArr = std::make_tuple(0, BaseTypeStr, Casts, NtArrInds, BndsTup);
-              LocalData.GlobalNtArrPtrs[VName].insert(ToInNtArr);
+              Info.GlobalNtArrPtrs[VName].insert(ToInNtArr);
               auto ToInArr = std::make_tuple(0, BaseTypeStr, Casts, ArrInds, BndsTup);
-              LocalData.GlobalArrPtrs[VName].insert(ToInArr);
+              Info.GlobalArrPtrs[VName].insert(ToInArr);
             }
             else if (!NtArrInds.empty()) {
               auto ToIn = std::make_tuple(0, BaseTypeStr, Casts, NtArrInds, BndsTup);
-              LocalData.GlobalNtArrPtrs[VName].insert(ToIn);
+              Info.GlobalNtArrPtrs[VName].insert(ToIn);
             } else {
               auto ToIn = std::make_tuple(0, BaseTypeStr, Casts,ArrInds, BndsTup);
-              LocalData.GlobalArrPtrs[VName].insert(ToIn);
+              Info.GlobalArrPtrs[VName].insert(ToIn);
             }
 
           }
@@ -334,16 +333,15 @@ public:
 private:
   ASTContext *Context;
   ProgramInfo &Info;
-  Parallel &LocalData;
 
   static bool isInSystemHeader(const std::string &FilePath) {
     return FilePath.rfind("/usr/", 0) == 0;
   }
 };
 
-void DeclToJsonConsumer::HandleTranslationUnit(ASTContext &C, Parallel &ThreadData) {
-  // Info.enterCompilationUnit(C);
-  DeclJsonVisitor DJV(&C, Info, ThreadData);
+void DeclToJsonConsumer::HandleTranslationUnit(ASTContext &C) {
+  Info.enterCompilationUnit(C);
+  DeclJsonVisitor DJV(&C, Info);
   TranslationUnitDecl *TUD = C.getTranslationUnitDecl();
   for (const auto &D : TUD->decls()) {
     // Dump the decl
@@ -351,7 +349,7 @@ void DeclToJsonConsumer::HandleTranslationUnit(ASTContext &C, Parallel &ThreadDa
     // D->dump();
     DJV.TraverseDecl(D);
   }
-  // Info.exitCompilationUnit();
+  Info.exitCompilationUnit();
 }
 
 static void DumpIndxes(llvm::raw_ostream &O, const std::set<unsigned> &Idx) {

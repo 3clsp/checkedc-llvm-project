@@ -102,30 +102,6 @@ public:
   void dumpStats(const std::set<std::string> &F) {
     printStats(F, llvm::errs());
   }
-
-  void bigDataMerger(std::unordered_map<int, Parallel> &AllData) {
-    for (auto &P: AllData) {
-      for (auto &Q: P.second.StArrPtrs) {
-        StArrPtrs[Q.first].insert(Q.second.begin(), Q.second.end());
-      }
-      for (auto &Q: P.second.StNtArrPtrs) {
-        StNtArrPtrs[Q.first].insert(Q.second.begin(), Q.second.end());
-      }
-      for (auto &Q: P.second.FnArrPtrs) {
-        FnArrPtrs[Q.first].insert(Q.second.begin(), Q.second.end());
-      }
-      for (auto &Q: P.second.FnNtArrPtrs) {
-        FnNtArrPtrs[Q.first].insert(Q.second.begin(), Q.second.end());
-      }
-      for (auto &Q: P.second.GlobalArrPtrs) {
-        GlobalArrPtrs[Q.first].insert(Q.second.begin(), Q.second.end());
-      }
-      for (auto &Q: P.second.GlobalNtArrPtrs) {
-        GlobalNtArrPtrs[Q.first].insert(Q.second.begin(), Q.second.end());
-      }
-    }
-  }
-
   void printStats(const std::set<std::string> &F, llvm::raw_ostream &O,
                   bool OnlySummary = false, bool JsonFormat = false);
 
@@ -194,8 +170,6 @@ public:
   void setTypeParamBinding(CallExpr *CE, unsigned int TypeVarIdx,
                            ConstraintVariable *CV,
                            ConstraintVariable* Ident, ASTContext *C);
-
-  void setPersisted(bool P) { Persisted = P; }
   bool hasTypeParamBindings(CallExpr *CE, ASTContext *C) const;
   const CallTypeParamBindingsT &getTypeParamBindings(CallExpr *CE,
                                                      ASTContext *C) const;

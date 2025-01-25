@@ -92,19 +92,6 @@ void findIntersection(const std::set<T> &Set1, const std::set<T> &Set2,
                         std::inserter(Out, Out.begin()));
 }
 
-typedef std::tuple<std::string, bool, std::string> FuncKeyTy;
-typedef std::tuple<std::string, unsigned, std::string> BndsTy;
-typedef std::tuple<unsigned, std::string, std::set<std::string>, std::set<unsigned>, BndsTy> ArrPtrInfoTy;
-
-struct Parallel {
-  std::map<std::string, std::set<ArrPtrInfoTy>> StArrPtrs;
-  std::map<std::string, std::set<ArrPtrInfoTy>> StNtArrPtrs;
-  std::map<FuncKeyTy, std::set<ArrPtrInfoTy>> FnArrPtrs;
-  std::map<FuncKeyTy, std::set<ArrPtrInfoTy>> FnNtArrPtrs;
-  std::map<std::string, std::set<ArrPtrInfoTy>> GlobalArrPtrs;
-  std::map<std::string, std::set<ArrPtrInfoTy>> GlobalNtArrPtrs;
-};
-
 const clang::Type *getNextTy(const clang::Type *Ty);
 
 clang::FunctionDecl *getDeclaration(clang::FunctionDecl *FD);
