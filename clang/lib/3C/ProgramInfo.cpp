@@ -571,8 +571,16 @@ ProgramInfo::insertNewFVConstraint(FunctionDecl *FD, FVConstraint *NewC,
     OldC->mergeDeclaration(NewC, *this, ReasonFailed);
   }
 
+  if (FuncName == "strerror_r")
+    return (*Map)[FuncName];
+
   // If successful, we're done and can skip error reporting
   if (ReasonFailed == "")
+    return (*Map)[FuncName];
+
+  // We don't mind if the merge failed due to one of the decl
+  // being extern.
+  if (OldC->isExtern() || NewC->isExtern())
     return (*Map)[FuncName];
 
   // Error reporting

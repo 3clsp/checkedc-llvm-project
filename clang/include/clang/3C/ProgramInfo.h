@@ -93,6 +93,8 @@ public:
   std::map<std::string, std::set<ArrPtrInfoTy>> GlobalArrPtrs;
   std::map<std::string, std::set<ArrPtrInfoTy>> GlobalNtArrPtrs;
 
+  std::set<std::string> VisitedFunctions;
+
   ProgramInfo();
   virtual ~ProgramInfo();
   void clear();
@@ -200,7 +202,7 @@ public:
 
   void addCastInformation(CVarSet &Cvs, const std::string &DataType);
 
-  std::map<CVarSet, std::set<std::string>> getCastInformation() { return CastInformation; }
+  const std::map<CVarSet, std::set<std::string>>& getCastInformation() { return CastInformation; }
 
 private:
   // List of constraint variables for declarations, indexed by their location in

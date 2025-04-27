@@ -1061,6 +1061,7 @@ FunctionVariableConstraint::FunctionVariableConstraint(
   QualType RT, RTIType;
   Hasproto = false;
   Hasbody = false;
+  IsExtern = false;
   FileName = "";
   HasEqArgumentConstraints = false;
   IsFunctionPtr = true;
@@ -1072,6 +1073,10 @@ FunctionVariableConstraint::FunctionVariableConstraint(
   if (D)
     FD = dyn_cast<FunctionDecl>(D);
   if (FD) {
+    if (FD->getStorageClass() == SC_Extern) {
+      IsExtern = true;
+    }
+
     // FunctionDecl::hasBody will return true if *any* declaration in the
     // declaration chain has a body, which is not what we want to record.
     // We want to record if *this* declaration has a body. To do that,

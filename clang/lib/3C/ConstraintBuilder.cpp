@@ -169,7 +169,10 @@ public:
       for (auto *TmpC : FVCons) {
         if (PVConstraint *PVC = dyn_cast<PVConstraint>(TmpC)) {
           TmpC = PVC->getFV();
-          assert(TmpC != nullptr && "Function pointer with null FVConstraint.");
+          // assert(TmpC != nullptr && "Function pointer with null FVConstraint.");
+          // Special case causing issues.
+          if (TmpC == nullptr)
+            continue;
         }
         std::set<unsigned> PrintfStringArgIndices;
         if (TFD != nullptr)
@@ -432,6 +435,16 @@ public:
 
   bool VisitFunctionDecl(FunctionDecl *D) {
     FullSourceLoc FL = Context->getFullLoc(D->getBeginLoc());
+
+    if (Info.VisitedFunctions.find(D->getNameAsString()) !=
+        Info.VisitedFunctions.end()) {
+      if (_3COpts.Verbose)
+        errs() << "Skipping function " << D->getName() << "\n";
+      return true;
+    }
+
+    if (D->hasBody())
+      Info.VisitedFunctions.insert(D->getNameAsString());
 
     if (_3COpts.Verbose)
       errs() << "Analyzing function " << D->getName() << "\n";

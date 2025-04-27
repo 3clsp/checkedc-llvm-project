@@ -16,13 +16,14 @@
 using namespace llvm;
 using namespace clang;
 
-std::set<std::string> isHavingCast(ProgramInfo &I, ConstraintVariable &CV) {
+const std::set<std::string>& isHavingCast(ProgramInfo &I, ConstraintVariable &CV) {
   for (auto &CIs : I.getCastInformation()) {
     if (CIs.first.find(&CV) != CIs.first.end()) {
-      return std::set<std::string>(CIs.second.begin(), CIs.second.end());
+      return CIs.second;
     }
   }
-  return std::set<std::string>();
+  static std::set<std::string> Empty;
+  return Empty;
 }
 
 class DeclJsonVisitor : public RecursiveASTVisitor<DeclJsonVisitor> {
@@ -112,16 +113,16 @@ public:
               }
               auto BndsTup = std::make_tuple(BVar, bidx, BVarN);
               if (!NtArrInds.empty() && !ArrInds.empty()) {
-                auto ToInNtArr = std::make_tuple(i, BaseTypeStr, Casts, NtArrInds, BndsTup);
+                auto ToInNtArr = std::make_tuple(i, BaseTypeStr, std::ref(Casts), NtArrInds, BndsTup);
                 Info.FnNtArrPtrs[FuncK].insert(ToInNtArr);
-                auto ToInArr = std::make_tuple(i, BaseTypeStr, Casts, ArrInds, BndsTup);
+                auto ToInArr = std::make_tuple(i, BaseTypeStr, std::ref(Casts), ArrInds, BndsTup);
                 Info.FnArrPtrs[FuncK].insert(ToInArr);
               }
               else if (!NtArrInds.empty()) {
-                auto ToIn = std::make_tuple(i, BaseTypeStr, Casts, NtArrInds, BndsTup);
+                auto ToIn = std::make_tuple(i, BaseTypeStr, std::ref(Casts), NtArrInds, BndsTup);
                 Info.FnNtArrPtrs[FuncK].insert(ToIn);
               } else {
-                auto ToIn = std::make_tuple(i, BaseTypeStr, Casts, ArrInds, BndsTup);
+                auto ToIn = std::make_tuple(i, BaseTypeStr, std::ref(Casts), ArrInds, BndsTup);
                 Info.FnArrPtrs[FuncK].insert(ToIn);
               }
 
@@ -237,16 +238,16 @@ public:
                 }
                 auto BndsTup = std::make_tuple(BVar, bidx, BVarN);
                 if (!NtArrInds.empty() && !ArrInds.empty()) {
-                  auto ToInNtArr = std::make_tuple(i, BaseTypeStr, Casts, NtArrInds, BndsTup);
+                  auto ToInNtArr = std::make_tuple(i, BaseTypeStr, std::ref(Casts), NtArrInds, BndsTup);
                   Info.StNtArrPtrs[StName].insert(ToInNtArr);
-                  auto ToInArr = std::make_tuple(i, BaseTypeStr, Casts, ArrInds, BndsTup);
+                  auto ToInArr = std::make_tuple(i, BaseTypeStr, std::ref(Casts), ArrInds, BndsTup);
                   Info.StArrPtrs[StName].insert(ToInArr);
                 }
                 else if (!NtArrInds.empty()) {
-                  auto ToIn = std::make_tuple(i, BaseTypeStr, Casts, NtArrInds, BndsTup);
+                  auto ToIn = std::make_tuple(i, BaseTypeStr, std::ref(Casts), NtArrInds, BndsTup);
                   Info.StNtArrPtrs[StName].insert(ToIn);
                 } else {
-                  auto ToIn = std::make_tuple(i, BaseTypeStr, Casts, ArrInds, BndsTup);
+                  auto ToIn = std::make_tuple(i, BaseTypeStr, std::ref(Casts), ArrInds, BndsTup);
                   Info.StArrPtrs[StName].insert(ToIn);
                 }
               }
@@ -310,16 +311,16 @@ public:
             }
             auto BndsTup = std::make_tuple(BVar, bidx, BVarN);
             if (!NtArrInds.empty() && !ArrInds.empty()) {
-              auto ToInNtArr = std::make_tuple(0, BaseTypeStr, Casts, NtArrInds, BndsTup);
+              auto ToInNtArr = std::make_tuple(0, BaseTypeStr, std::ref(Casts), NtArrInds, BndsTup);
               Info.GlobalNtArrPtrs[VName].insert(ToInNtArr);
-              auto ToInArr = std::make_tuple(0, BaseTypeStr, Casts, ArrInds, BndsTup);
+              auto ToInArr = std::make_tuple(0, BaseTypeStr, std::ref(Casts), ArrInds, BndsTup);
               Info.GlobalArrPtrs[VName].insert(ToInArr);
             }
             else if (!NtArrInds.empty()) {
-              auto ToIn = std::make_tuple(0, BaseTypeStr, Casts, NtArrInds, BndsTup);
+              auto ToIn = std::make_tuple(0, BaseTypeStr, std::ref(Casts), NtArrInds, BndsTup);
               Info.GlobalNtArrPtrs[VName].insert(ToIn);
             } else {
-              auto ToIn = std::make_tuple(0, BaseTypeStr, Casts,ArrInds, BndsTup);
+              auto ToIn = std::make_tuple(0, BaseTypeStr, std::ref(Casts),ArrInds, BndsTup);
               Info.GlobalArrPtrs[VName].insert(ToIn);
             }
 

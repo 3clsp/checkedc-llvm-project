@@ -769,6 +769,8 @@ AVarBoundsInfo::inferLowerBounds(ProgramInfo *PI) {
 
 BoundsKey AVarBoundsInfo::getFreshLowerBound(BoundsKey Arr) {
   ProgramVar *ArrVar = getProgramVar(Arr);
+  if (ArrVar == nullptr)
+    return InvalidLowerBoundKey;
   BoundsKey FreshLB = getRandomBKey();
   ProgramVar *FreshLBVar =
     ProgramVar::createNewProgramVar(FreshLB,

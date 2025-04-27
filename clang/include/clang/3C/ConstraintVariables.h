@@ -652,6 +652,7 @@ private:
   std::string FileName;
   bool Hasproto;
   bool Hasbody;
+  bool IsExtern;
   bool IsStatic;
   FunctionVariableConstraint *Parent;
   // Flag to indicate whether this is a function pointer or not.
@@ -689,6 +690,8 @@ public:
   bool hasProtoType() const { return Hasproto; }
   bool hasBody() const { return Hasbody; }
   void setHasBody(bool Hbody) { this->Hasbody = Hbody; }
+
+  bool isExtern() const { return IsExtern; }
 
   static bool classof(const ConstraintVariable *S) {
     return S->getKind() == FunctionVariable;

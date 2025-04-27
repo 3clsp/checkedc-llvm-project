@@ -73,6 +73,9 @@ private:
 
 void CtxSensitiveBoundsKeyHandler::insertCtxSensBoundsKey(
     ProgramVar *OldPV, BoundsKey NK, const ProgramVarScope *NPS) {
+  if (!NPS)
+      return;
+
   ProgramVar *NKVar = OldPV->makeCopy(NK);
   NKVar->setScope(NPS);
   ABI->insertProgramVar(NK, NKVar);
