@@ -235,6 +235,7 @@ PointerVariableConstraint::PointerVariableConstraint(
   // decaying an array to a pointer. If the original type is some
   // kind of array type, we want to use that instead.
   if (const DecayedType *DC = dyn_cast<DecayedType>(Ty)) {
+    llvm::errs() << "Type is a decayed type. Checking if original type is an array type.\n";
     QualType QTytmp = DC->getOriginalType();
     if (QTytmp->isArrayType() || QTytmp->isIncompleteArrayType()) {
       QTy = QTytmp;
@@ -251,6 +252,8 @@ PointerVariableConstraint::PointerVariableConstraint(
   auto &ABInfo = I.getABoundsInfo();
   if (D != nullptr) {
     if (ABInfo.tryGetVariable(D, BKey)) {
+      llvm::errs() << "Found existing bounds key for declaration " << D->getName()
+                   << " at " << PSL.toString() << "\n";
       ValidBoundsKey = true;
     }
     if (D->hasBoundsAnnotations()) {
@@ -435,6 +438,12 @@ PointerVariableConstraint::PointerVariableConstraint(
             if (!ParenTLoc.isNull())
               TLoc = ParenTLoc.getInnerLoc();
           }
+        } else if (const TypeOfType *TOT = dyn_cast<TypeOfType>(Ty)) {
+          QTy = TOT->getUnderlyingType();
+          Ty = QTy.getTypePtr();
+        } else if (const TypeOfExprType *TOET = dyn_cast<TypeOfExprType>(Ty)) {
+          QTy = TOET->getUnderlyingExpr()->getType();
+          Ty = QTy.getTypePtr();
         } else {
           Boiling = false;
         }
@@ -472,7 +481,6 @@ PointerVariableConstraint::PointerVariableConstraint(
       insertQualType(TypeIdx, QTy);
 
       ArrSizes[TypeIdx] = std::pair<OriginalArrType, uint64_t>(O_Pointer, 0);
-
       // Iterate.
       QTy = QTy.getSingleStepDesugaredType(C);
       QTy = QTy.getTypePtr()->getPointeeType();
