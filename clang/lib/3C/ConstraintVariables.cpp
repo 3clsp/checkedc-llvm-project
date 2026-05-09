@@ -235,7 +235,6 @@ PointerVariableConstraint::PointerVariableConstraint(
   // decaying an array to a pointer. If the original type is some
   // kind of array type, we want to use that instead.
   if (const DecayedType *DC = dyn_cast<DecayedType>(Ty)) {
-    llvm::errs() << "Type is a decayed type. Checking if original type is an array type.\n";
     QualType QTytmp = DC->getOriginalType();
     if (QTytmp->isArrayType() || QTytmp->isIncompleteArrayType()) {
       QTy = QTytmp;
@@ -252,8 +251,6 @@ PointerVariableConstraint::PointerVariableConstraint(
   auto &ABInfo = I.getABoundsInfo();
   if (D != nullptr) {
     if (ABInfo.tryGetVariable(D, BKey)) {
-      llvm::errs() << "Found existing bounds key for declaration " << D->getName()
-                   << " at " << PSL.toString() << "\n";
       ValidBoundsKey = true;
     }
     if (D->hasBoundsAnnotations()) {
