@@ -268,5 +268,5 @@ bool typeArgsProvided(CallExpr *Call) {
     return false;
   }
   // We only handle direct calls, so there must be a DeclRefExpr.
-  llvm_unreachable("Callee of function call is not DeclRefExpr.");
+  return false;
 }
