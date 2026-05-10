@@ -249,6 +249,12 @@ void TypeVarVisitor::setProgramInfoTypeVars() {
 // call so that we don't mess with anything already there.
 bool typeArgsProvided(CallExpr *Call) {
   Expr *Callee = Call->getCallee()->IgnoreParenImpCasts();
+
+  // Strip off the address-of operator
+  if (auto *UO = dyn_cast<UnaryOperator>(Callee))
+    if (UO->getOpcode() == UO_AddrOf)
+      Callee = UO->getSubExpr()->IgnoreParenImpCasts();
+
   if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Callee)) {
     // ArgInfo is null if there are no type arguments anywhere in the program
     if (auto *ArgInfo = DRE->GetTypeArgumentInfo())
